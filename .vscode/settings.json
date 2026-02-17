@@ -1,0 +1,43 @@
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "explicit",
+    "source.organizeImports": "explicit"
+  },
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": false,
+  "editor.rulers": [100],
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/CVS": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true,
+    "**/eslint.config.js": true,
+    "**/tsconfig.json": true,
+
+    "**/node_modules": true,
+    ".turbo": true,
+    ".devcontainer": true,
+    ".env": true,
+    "docker-compose.yml": true,
+    "turbo.json": true,
+
+    "backend/__core/index.ts": true,
+    "backend/__core/trpc.ts": true,
+    "backend/__core/env.d.ts": true,
+
+    "frontend/eslint.config.js": true,
+    "frontend/tsconfig.json": true,
+    "frontend/vite.config.ts": true,
+    "frontend/public": true,
+    "frontend/components.json": true,
+    "frontend/index.html": true
+  },
+  "workbench.editorAssociations": {
+    "*.md": "vscode.markdown.preview.editor"
+  }
+}

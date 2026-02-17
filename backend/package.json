@@ -1,0 +1,23 @@
+{
+  "name": "@permitflow/backend",
+  "type": "module",
+  "version": "0.0.0",
+  "sideEffects": false,
+  "exports": {
+    ".": "./app/index.ts",
+    "./schemas": "./app/schemas/index.ts"
+  },
+  "scripts": {
+    "dev": "bun run --hot src/index.ts"
+  },
+  "dependencies": {
+    "@hono/trpc-server": "^0.3.4",
+    "awilix": "^12.0.5",
+    "hono": "^4.7.4",
+    "zod": "^3.24.2"
+  },
+  "imports": {
+    "#app/*": "./app/*",
+    "#core/*": "./core/*"
+  }
+}

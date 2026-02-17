@@ -1,0 +1,18 @@
+# Bun
+bun.lockb
+
+# Node
+node_modules
+dist
+
+# Build
+*.log
+.DS_Store
+coverage
+.turbo
+.env
+
+# DB
+backend/tmp/
+
+nohup.out
