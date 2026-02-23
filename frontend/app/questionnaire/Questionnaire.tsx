@@ -61,7 +61,9 @@ export function Questionnaire({ projectId }: Props) {
   return (
     <Card>
       <CardContent className="flex flex-col gap-5 pt-6">
-        <ProgressBar progress={progress} current={currentIndex + 1} total={active.length} />
+        {!isFirst && (
+          <ProgressBar progress={progress} current={currentIndex + 1} total={active.length} />
+        )}
 
         <div className="min-h-[200px]">
           {current && (

@@ -62,4 +62,34 @@ describe("projects router", () => {
 
     expect(caller.projects.get({ id: "nonexistent" })).rejects.toThrow("Project not found")
   })
+
+  test("delete removes project", async () => {
+    const caller = createTestCaller(appRouter)
+    const project = await caller.projects.create({ name: "ToDelete", location: "SF" })
+
+    await caller.projects.delete({ id: project.id })
+
+    expect(caller.projects.get({ id: project.id })).rejects.toThrow("Project not found")
+  })
+
+  test("delete cascades to questionnaire", async () => {
+    const caller = createTestCaller(appRouter)
+    const project = await caller.projects.create({ name: "Cascade", location: "San Francisco, CA" })
+
+    await caller.questionnaires.submit({
+      projectId: project.id,
+      answers: { workType: ["interior"], interiorWork: ["flooring"] }
+    })
+
+    await caller.projects.delete({ id: project.id })
+
+    const q = await caller.questionnaires.getByProject({ projectId: project.id })
+    expect(q).toBeNull()
+  })
+
+  test("delete throws NOT_FOUND for missing project", async () => {
+    const caller = createTestCaller(appRouter)
+
+    expect(caller.projects.delete({ id: "nonexistent" })).rejects.toThrow("Project not found")
+  })
 })

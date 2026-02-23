@@ -27,6 +27,9 @@ const initialContext: Context = {
   permitResult: null
 }
 
+/** Timeout before auto-recovering from stuck submitting/deleting states */
+const API_TIMEOUT_MS = 30_000
+
 export const createQuestionnaireMachine = (questions: QuestionDefinition[]) =>
   setup({
     types: {
@@ -83,6 +86,8 @@ export const createQuestionnaireMachine = (questions: QuestionDefinition[]) =>
         }
       },
       submitting: {
+        // Auto-recover if API call never responds
+        after: { [API_TIMEOUT_MS]: { target: "answering" } },
         on: {
           SUBMIT_SUCCESS: {
             target: "submitted",
@@ -97,6 +102,8 @@ export const createQuestionnaireMachine = (questions: QuestionDefinition[]) =>
         }
       },
       deleting: {
+        // Auto-recover if delete API call never responds
+        after: { [API_TIMEOUT_MS]: { target: "submitted" } },
         on: {
           DELETE_SUCCESS: { target: "idle", actions: assign(() => initialContext) },
           DELETE_ERROR: { target: "submitted" }

@@ -25,5 +25,21 @@ export const projects = router({
     const project = ctx.cradle.projects.add(input)
 
     return ctx.cradle.projects.toModel(project)
+  }),
+
+  delete: procedure.input(z.object({ id: z.string() })).mutation(({ ctx, input }) => {
+    const project = ctx.cradle.projects.get(input.id)
+    if (!project) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Project not found." })
+    }
+
+    // Cascade: remove associated questionnaire before deleting project
+    const questionnaire = ctx.cradle.questionnaires.getByProjectId(input.id)
+    if (questionnaire) {
+      ctx.cradle.questionnaires.remove(questionnaire.id)
+    }
+
+    ctx.cradle.projects.remove(input.id)
+    return { success: true }
   })
 })

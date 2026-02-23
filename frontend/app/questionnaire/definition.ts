@@ -1,3 +1,5 @@
+import { QUESTION_OPTIONS } from "@permitflow/backend/logic"
+
 export type QuestionDefinition = {
   id: string
   question: string
@@ -6,57 +8,69 @@ export type QuestionDefinition = {
   isActive: (answers: Record<string, string[]>) => boolean
 }
 
+/** Helper to turn a raw option value array into labeled options */
+const opts = (values: readonly string[], labels: Record<string, string>) =>
+  values.map((v) => ({ value: v, label: labels[v] ?? v }))
+
+const WORK_TYPE_LABELS: Record<string, string> = {
+  interior: "Interior work",
+  exterior: "Exterior work",
+  additions: "Property additions"
+}
+
+const INTERIOR_LABELS: Record<string, string> = {
+  flooring: "Flooring",
+  bathroom_remodel: "Bathroom remodel",
+  new_bathroom: "New bathroom",
+  new_laundry_room: "New laundry room",
+  electrical_work: "Electrical work",
+  other: "Other"
+}
+
+const EXTERIOR_LABELS: Record<string, string> = {
+  roof_modifications: "Roof modifications/repair",
+  garage_door_replacement: "Garage door replacement",
+  deck_construction: "Deck construction",
+  garage_modifications: "Garage modifications",
+  exterior_doors: "Exterior doors",
+  fencing: "Fencing",
+  other: "Other"
+}
+
+const ADDITION_LABELS: Record<string, string> = {
+  adu: "ADU (Accessory dwelling unit)",
+  garage_conversion: "Garage conversion",
+  basement_attic_conversion: "Basement/attic conversion",
+  other: "Other"
+}
+
 export const scopeOfWorkQuestions: QuestionDefinition[] = [
   {
     id: "workType",
     question: "What type of work are you doing?",
     type: "multi-select",
-    options: [
-      { value: "interior", label: "Interior work" },
-      { value: "exterior", label: "Exterior work" },
-      { value: "additions", label: "Property additions" }
-    ],
+    options: opts(QUESTION_OPTIONS.workType, WORK_TYPE_LABELS),
     isActive: () => true
   },
   {
     id: "interiorWork",
     question: "What interior work are you doing?",
     type: "multi-select",
-    options: [
-      { value: "flooring", label: "Flooring" },
-      { value: "bathroom_remodel", label: "Bathroom remodel" },
-      { value: "new_bathroom", label: "New bathroom" },
-      { value: "new_laundry_room", label: "New laundry room" },
-      { value: "electrical_work", label: "Electrical work" },
-      { value: "other", label: "Other" }
-    ],
+    options: opts(QUESTION_OPTIONS.interiorWork, INTERIOR_LABELS),
     isActive: (answers) => answers.workType?.includes("interior") ?? false
   },
   {
     id: "exteriorWork",
     question: "What exterior work are you doing?",
     type: "multi-select",
-    options: [
-      { value: "roof_modifications", label: "Roof modifications/repair" },
-      { value: "garage_door_replacement", label: "Garage door replacement" },
-      { value: "deck_construction", label: "Deck construction" },
-      { value: "garage_modifications", label: "Garage modifications" },
-      { value: "exterior_doors", label: "Exterior doors" },
-      { value: "fencing", label: "Fencing" },
-      { value: "other", label: "Other" }
-    ],
+    options: opts(QUESTION_OPTIONS.exteriorWork, EXTERIOR_LABELS),
     isActive: (answers) => answers.workType?.includes("exterior") ?? false
   },
   {
     id: "propertyAdditions",
     question: "What type of property addition?",
     type: "single-select",
-    options: [
-      { value: "adu", label: "ADU (Accessory dwelling unit)" },
-      { value: "garage_conversion", label: "Garage conversion" },
-      { value: "basement_attic_conversion", label: "Basement/attic conversion" },
-      { value: "other", label: "Other" }
-    ],
+    options: opts(QUESTION_OPTIONS.propertyAdditions, ADDITION_LABELS),
     isActive: (answers) => answers.workType?.includes("additions") ?? false
   }
 ]

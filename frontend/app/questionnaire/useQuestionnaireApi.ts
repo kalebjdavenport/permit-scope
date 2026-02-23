@@ -14,6 +14,7 @@ type ActorRef = ReturnType<typeof QuestionnaireContext.useActorRef>
  */
 export function useQuestionnaireApi(projectId: string, actorRef: ActorRef) {
   const queryClient = useQueryClient()
+  // Prevents re-dispatching LOAD_EXISTING if React Query refetches
   const loadedRef = useRef(false)
 
   const stateValue = QuestionnaireContext.useSelector((s) => s.value)
@@ -37,31 +38,44 @@ export function useQuestionnaireApi(projectId: string, actorRef: ActorRef) {
     })
   }, [existing, isLoading, actorRef])
 
-  // Fire submit API call when machine enters "submitting" state
+  // Fire submit API call when machine enters "submitting" state.
+  // Deps intentionally limited to stateValue — we only want to fire once per transition.
   useEffect(() => {
     if (stateValue !== "submitting") return
+    let cancelled = false
     const snap = actorRef.getSnapshot()
     const scrubbed = scrubAnswers(snap.context.answers, scopeOfWorkQuestions)
     submitMutation.mutateAsync({ projectId, answers: scrubbed }).then(
       (result) => {
+        if (cancelled) return
         queryClient.invalidateQueries({ queryKey })
         actorRef.send({ type: "SUBMIT_SUCCESS", permitResult: result.permitResult })
       },
-      () => actorRef.send({ type: "SUBMIT_ERROR" })
+      () => {
+        if (cancelled) return
+        actorRef.send({ type: "SUBMIT_ERROR" })
+      }
     )
+    return () => { cancelled = true }
   }, [stateValue]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fire delete API call when machine enters "deleting" state
   useEffect(() => {
     if (stateValue !== "deleting") return
+    let cancelled = false
     deleteMutation.mutateAsync({ projectId }).then(
       () => {
+        if (cancelled) return
         queryClient.invalidateQueries({ queryKey })
-        loadedRef.current = false
+        loadedRef.current = false // Allow re-hydration after start over
         actorRef.send({ type: "DELETE_SUCCESS" })
       },
-      () => actorRef.send({ type: "DELETE_ERROR" })
+      () => {
+        if (cancelled) return
+        actorRef.send({ type: "DELETE_ERROR" })
+      }
     )
+    return () => { cancelled = true }
   }, [stateValue]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return { isLoading }
