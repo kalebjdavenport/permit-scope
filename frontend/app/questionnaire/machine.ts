@@ -6,6 +6,7 @@ type Context = {
   answers: Record<string, string[]>
   currentIndex: number
   permitResult: PermitOutcome | null
+  error: string | null
 }
 
 export type Events =
@@ -17,18 +18,19 @@ export type Events =
   | { type: "BACK" }
   | { type: "SUBMIT" }
   | { type: "SUBMIT_SUCCESS"; permitResult: PermitOutcome }
-  | { type: "SUBMIT_ERROR" }
+  | { type: "SUBMIT_ERROR"; error: string }
   | { type: "START_OVER" }
   | { type: "DELETE_SUCCESS" }
-  | { type: "DELETE_ERROR" }
+  | { type: "DELETE_ERROR"; error: string }
   | { type: "EDIT" }
   | { type: "REOPEN_SUCCESS" }
-  | { type: "REOPEN_ERROR" }
+  | { type: "REOPEN_ERROR"; error: string }
 
 const initialContext: Context = {
   answers: {},
   currentIndex: 0,
-  permitResult: null
+  permitResult: null,
+  error: null
 }
 
 /** Auto-recover if the network/API never responds (submitting, deleting, reopening) */
@@ -91,13 +93,18 @@ export const createQuestionnaireMachine = (questions: QuestionDefinition[]) =>
               return {
                 answers: next,
                 currentIndex: Math.min(context.currentIndex, active.length - 1),
-                permitResult: context.permitResult
+                permitResult: context.permitResult,
+                error: null
               }
             })
           },
           NEXT: { guard: "hasNext", actions: assign(({ context }) => ({ currentIndex: context.currentIndex + 1 })) },
           BACK: { guard: "hasPrev", actions: assign(({ context }) => ({ currentIndex: context.currentIndex - 1 })) },
-          SUBMIT: { guard: "allAnswered", target: "submitting" }
+          SUBMIT: {
+            guard: "allAnswered",
+            target: "submitting",
+            actions: assign({ error: null })
+          }
         }
       },
       submitting: {
@@ -106,15 +113,18 @@ export const createQuestionnaireMachine = (questions: QuestionDefinition[]) =>
         on: {
           SUBMIT_SUCCESS: {
             target: "submitted",
-            actions: assign(({ event }) => ({ permitResult: event.permitResult }))
+            actions: assign(({ event }) => ({ permitResult: event.permitResult, error: null }))
           },
-          SUBMIT_ERROR: { target: "answering" }
+          SUBMIT_ERROR: {
+            target: "answering",
+            actions: assign(({ event }) => ({ error: event.error }))
+          }
         }
       },
       submitted: {
         on: {
-          START_OVER: { target: "deleting" },
-          EDIT: { target: "reopening" }
+          START_OVER: { target: "deleting", actions: assign({ error: null }) },
+          EDIT: { target: "reopening", actions: assign({ error: null }) }
         }
       },
       reopening: {
@@ -126,10 +136,14 @@ export const createQuestionnaireMachine = (questions: QuestionDefinition[]) =>
             actions: assign(({ context }) => ({
               answers: context.answers,
               currentIndex: 0,
-              permitResult: context.permitResult
+              permitResult: context.permitResult,
+              error: null
             }))
           },
-          REOPEN_ERROR: { target: "submitted" }
+          REOPEN_ERROR: {
+            target: "submitted",
+            actions: assign(({ event }) => ({ error: event.error }))
+          }
         }
       },
       deleting: {
@@ -137,7 +151,10 @@ export const createQuestionnaireMachine = (questions: QuestionDefinition[]) =>
         after: { [API_TIMEOUT_MS]: { target: "submitted" } },
         on: {
           DELETE_SUCCESS: { target: "idle", actions: assign(() => initialContext) },
-          DELETE_ERROR: { target: "submitted" }
+          DELETE_ERROR: {
+            target: "submitted",
+            actions: assign(({ event }) => ({ error: event.error }))
+          }
         }
       }
     }

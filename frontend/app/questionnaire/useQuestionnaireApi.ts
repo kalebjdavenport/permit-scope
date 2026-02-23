@@ -82,8 +82,9 @@ export function useQuestionnaireApi(projectId: string, actorRef: ActorRef) {
       const result = await submitMutation.mutateAsync({ projectId, answers: scrubbed })
       queryClient.invalidateQueries({ queryKey })
       actorRef.send({ type: "SUBMIT_SUCCESS", permitResult: result.permitResult! })
-    } catch {
-      actorRef.send({ type: "SUBMIT_ERROR" })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Something went wrong. Please try again."
+      actorRef.send({ type: "SUBMIT_ERROR", error: message })
     }
   })
 
@@ -94,8 +95,9 @@ export function useQuestionnaireApi(projectId: string, actorRef: ActorRef) {
       queryClient.invalidateQueries({ queryKey })
       loadedRef.current = false
       actorRef.send({ type: "DELETE_SUCCESS" })
-    } catch {
-      actorRef.send({ type: "DELETE_ERROR" })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Something went wrong. Please try again."
+      actorRef.send({ type: "DELETE_ERROR", error: message })
     }
   })
 
@@ -105,8 +107,9 @@ export function useQuestionnaireApi(projectId: string, actorRef: ActorRef) {
       await reopenMutation.mutateAsync({ projectId })
       queryClient.invalidateQueries({ queryKey })
       actorRef.send({ type: "REOPEN_SUCCESS" })
-    } catch {
-      actorRef.send({ type: "REOPEN_ERROR" })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Something went wrong. Please try again."
+      actorRef.send({ type: "REOPEN_ERROR", error: message })
     }
   })
 

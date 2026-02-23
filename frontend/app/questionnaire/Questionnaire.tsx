@@ -1,5 +1,6 @@
 import { BlurFade } from "@/components/magicui/blur-fade"
 import { ShimmerButton } from "@/components/magicui/shimmer-button"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Link } from "react-router"
@@ -18,6 +19,7 @@ export function Questionnaire({ projectId }: Props) {
   const answers = QuestionnaireContext.useSelector((s) => s.context.answers)
   const currentIndex = QuestionnaireContext.useSelector((s) => s.context.currentIndex)
   const permitResult = QuestionnaireContext.useSelector((s) => s.context.permitResult)
+  const error = QuestionnaireContext.useSelector((s) => s.context.error)
   const send = actorRef.send
 
   const { isLoading } = useQuestionnaireApi(projectId, actorRef)
@@ -45,6 +47,7 @@ export function Questionnaire({ projectId }: Props) {
     return (
       <div className="flex flex-col gap-4">
         <PermitResult permitResult={permitResult!} />
+        <ErrorAlert error={error} />
         <div className="flex gap-2">
           <Button asChild>
             <Link to="/projects">Back to Projects</Link>
@@ -93,6 +96,8 @@ export function Questionnaire({ projectId }: Props) {
           )}
         </div>
 
+        <ErrorAlert error={error} />
+
         <div className="flex gap-2">
           {!isFirst && (
             <Button variant="outline" onClick={() => send({ type: "BACK" })}>
@@ -137,5 +142,14 @@ function SubmitButton({
     >
       Submit
     </ShimmerButton>
+  )
+}
+
+function ErrorAlert({ error }: { error: string | null }) {
+  if (!error) return null
+  return (
+    <Alert variant="destructive">
+      <AlertDescription>{error}</AlertDescription>
+    </Alert>
   )
 }

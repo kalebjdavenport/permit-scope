@@ -32,7 +32,24 @@ export function ProjectListPage() {
 function ProjectList() {
   const { data } = useQuery(trpc.projects.list.queryOptions())
 
-  if (!data) return null
+  if (!data) {
+    return (
+      <div className="grid gap-3">
+        {Array.from({ length: 3 }, (_, i) => (
+          <BlurFade key={i} delay={0.05 * i}>
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col gap-2">
+                  <div className="h-5 w-48 animate-pulse rounded bg-muted" />
+                  <div className="h-4 w-32 animate-pulse rounded bg-muted" />
+                </div>
+              </CardHeader>
+            </Card>
+          </BlurFade>
+        ))}
+      </div>
+    )
+  }
 
   if (data.length === 0) {
     return (
