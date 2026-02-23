@@ -82,6 +82,19 @@ export const questionnaires = router({
       return ctx.cradle.questionnaires.toModel(created)
     }),
 
+  reopenDraft: procedure
+    .input(z.object({ projectId: z.string().min(1) }))
+    .mutation(({ ctx, input }) => {
+      const existing = ctx.cradle.questionnaires.getByProjectId(input.projectId)
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "No questionnaire found." })
+      }
+      const updated = { ...existing, status: "draft" as const, currentIndex: 0 }
+      ctx.cradle.questionnaires.update(existing.id, updated)
+      console.log("[reopenDraft]", input.projectId)
+      return ctx.cradle.questionnaires.toModel(updated)
+    }),
+
   delete: procedure
     .input(z.object({ projectId: z.string() }))
     .mutation(({ ctx, input }) => {

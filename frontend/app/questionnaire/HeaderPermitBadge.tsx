@@ -1,13 +1,8 @@
-import { determinePermitRequirement, type PermitOutcome } from "@permitflow/backend/logic"
+import { determinePermitRequirement } from "@permitflow/backend/logic"
 import { createPortal } from "react-dom"
 import { QuestionnaireContext } from "./context"
 import { scopeOfWorkQuestions, scrubAnswers } from "./definition"
-
-const LABELS: Record<PermitOutcome, string> = {
-  in_house_review: "In-House Review",
-  otc_review: "Over-the-Counter",
-  no_permit: "No Permit Required"
-}
+import { OUTCOME_META } from "./outcomeMeta"
 
 type Props = { location: string }
 
@@ -33,7 +28,9 @@ export function HeaderPermitBadge({ location }: Props) {
       aria-atomic="true"
     >
       <span className="text-muted-foreground">Likely outcome</span>
-      <span className="font-semibold text-foreground">{LABELS[outcome]}</span>
+      <span className="font-semibold text-foreground">
+        {OUTCOME_META[outcome].shortLabel}
+      </span>
     </div>,
     slot
   )

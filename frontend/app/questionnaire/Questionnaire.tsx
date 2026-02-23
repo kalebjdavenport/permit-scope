@@ -38,7 +38,8 @@ export function Questionnaire({ projectId }: Props) {
     )
   }
 
-  if (stateValue === "submitted" || stateValue === "deleting") {
+  if (stateValue === "submitted" || stateValue === "deleting" || stateValue === "reopening") {
+    const busy = stateValue === "deleting" || stateValue === "reopening"
     return (
       <div className="flex flex-col gap-4">
         <PermitResult permitResult={permitResult!} />
@@ -48,8 +49,15 @@ export function Questionnaire({ projectId }: Props) {
           </Button>
           <Button
             variant="outline"
+            onClick={() => send({ type: "EDIT" })}
+            disabled={busy}
+          >
+            {stateValue === "reopening" ? "Reopening..." : "Edit Answers"}
+          </Button>
+          <Button
+            variant="outline"
             onClick={() => send({ type: "START_OVER" })}
-            disabled={stateValue === "deleting"}
+            disabled={busy}
           >
             {stateValue === "deleting" ? "Clearing..." : "Start Over"}
           </Button>

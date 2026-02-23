@@ -33,6 +33,7 @@ export function useQuestionnaireApi(projectId: string, actorRef: ActorRef) {
   const submitMutation = useMutation(trpc.questionnaires.submit.mutationOptions())
   const deleteMutation = useMutation(trpc.questionnaires.delete.mutationOptions())
   const draftMutation = useMutation(trpc.questionnaires.saveDraft.mutationOptions())
+  const reopenMutation = useMutation(trpc.questionnaires.reopenDraft.mutationOptions())
   const queryKey = trpc.questionnaires.getByProject.queryOptions({ projectId }).queryKey
 
   // Hydrate machine with saved questionnaire on first load
@@ -101,6 +102,24 @@ export function useQuestionnaireApi(projectId: string, actorRef: ActorRef) {
       () => {
         if (cancelled) return
         actorRef.send({ type: "DELETE_ERROR" })
+      }
+    )
+    return () => { cancelled = true }
+  }, [stateValue]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fire reopen API call when machine enters "reopening" state
+  useEffect(() => {
+    if (stateValue !== "reopening") return
+    let cancelled = false
+    reopenMutation.mutateAsync({ projectId }).then(
+      () => {
+        if (cancelled) return
+        queryClient.invalidateQueries({ queryKey })
+        actorRef.send({ type: "REOPEN_SUCCESS" })
+      },
+      () => {
+        if (cancelled) return
+        actorRef.send({ type: "REOPEN_ERROR" })
       }
     )
     return () => { cancelled = true }

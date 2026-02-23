@@ -21,6 +21,9 @@ export type Events =
   | { type: "START_OVER" }
   | { type: "DELETE_SUCCESS" }
   | { type: "DELETE_ERROR" }
+  | { type: "EDIT" }
+  | { type: "REOPEN_SUCCESS" }
+  | { type: "REOPEN_ERROR" }
 
 const initialContext: Context = {
   answers: {},
@@ -110,7 +113,22 @@ export const createQuestionnaireMachine = (questions: QuestionDefinition[]) =>
       },
       submitted: {
         on: {
-          START_OVER: { target: "deleting" }
+          START_OVER: { target: "deleting" },
+          EDIT: { target: "reopening" }
+        }
+      },
+      reopening: {
+        after: { [API_TIMEOUT_MS]: { target: "submitted" } },
+        on: {
+          REOPEN_SUCCESS: {
+            target: "answering",
+            actions: assign(({ context }) => ({
+              answers: context.answers,
+              currentIndex: 0,
+              permitResult: context.permitResult
+            }))
+          },
+          REOPEN_ERROR: { target: "submitted" }
         }
       },
       deleting: {
