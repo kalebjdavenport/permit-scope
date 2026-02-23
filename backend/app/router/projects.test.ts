@@ -60,7 +60,7 @@ describe("projects router", () => {
   test("get throws NOT_FOUND for missing project", async () => {
     const caller = createTestCaller(appRouter)
 
-    expect(caller.projects.get({ id: "nonexistent" })).rejects.toThrow("Project not found")
+    await expect(caller.projects.get({ id: "nonexistent" })).rejects.toThrow("Project not found")
   })
 
   test("delete removes project", async () => {
@@ -69,7 +69,7 @@ describe("projects router", () => {
 
     await caller.projects.delete({ id: project.id })
 
-    expect(caller.projects.get({ id: project.id })).rejects.toThrow("Project not found")
+    await expect(caller.projects.get({ id: project.id })).rejects.toThrow("Project not found")
   })
 
   test("delete cascades to questionnaire", async () => {
@@ -90,6 +90,6 @@ describe("projects router", () => {
   test("delete throws NOT_FOUND for missing project", async () => {
     const caller = createTestCaller(appRouter)
 
-    expect(caller.projects.delete({ id: "nonexistent" })).rejects.toThrow("Project not found")
+    await expect(caller.projects.delete({ id: "nonexistent" })).rejects.toThrow("Project not found")
   })
 })

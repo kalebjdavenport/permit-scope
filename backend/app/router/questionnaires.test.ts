@@ -67,7 +67,7 @@ describe("questionnaires router", () => {
   test("submit throws NOT_FOUND for missing project", async () => {
     const caller = createTestCaller(appRouter)
 
-    expect(
+    await expect(
       caller.questionnaires.submit({
         projectId: "nonexistent",
         answers: { workType: ["interior"], interiorWork: ["flooring"] }
@@ -79,7 +79,7 @@ describe("questionnaires router", () => {
     const caller = createTestCaller(appRouter)
     const project = await createProject(caller)
 
-    expect(
+    await expect(
       caller.questionnaires.submit({
         projectId: project.id,
         answers: { interiorWork: ["flooring"] }
@@ -91,7 +91,7 @@ describe("questionnaires router", () => {
     const caller = createTestCaller(appRouter)
     const project = await createProject(caller)
 
-    expect(
+    await expect(
       caller.questionnaires.submit({
         projectId: project.id,
         answers: {
@@ -107,7 +107,7 @@ describe("questionnaires router", () => {
     const caller = createTestCaller(appRouter)
     const project = await createProject(caller)
 
-    expect(
+    await expect(
       caller.questionnaires.submit({
         projectId: project.id,
         answers: {
@@ -122,7 +122,7 @@ describe("questionnaires router", () => {
     const caller = createTestCaller(appRouter)
     const project = await createProject(caller)
 
-    expect(
+    await expect(
       caller.questionnaires.submit({
         projectId: project.id,
         answers: {
@@ -130,6 +130,58 @@ describe("questionnaires router", () => {
         }
       })
     ).rejects.toThrow("Exactly one property addition is required")
+  })
+
+  test("submit rejects duplicate option values", async () => {
+    const caller = createTestCaller(appRouter)
+    const project = await createProject(caller)
+
+    await expect(
+      caller.questionnaires.submit({
+        projectId: project.id,
+        answers: {
+          workType: ["interior", "interior"],
+          interiorWork: ["flooring"]
+        }
+      })
+    ).rejects.toThrow("Duplicate option values are not allowed")
+  })
+
+  test("submit rejects unknown question keys", async () => {
+    const caller = createTestCaller(appRouter)
+    const project = await createProject(caller)
+
+    await expect(
+      caller.questionnaires.submit({
+        projectId: project.id,
+        answers: {
+          workType: ["interior"],
+          interiorWork: ["flooring"],
+          unknownQuestion: ["x"]
+        }
+      } as any)
+    ).rejects.toThrow()
+
+    const result = await caller.questionnaires.getByProject({ projectId: project.id })
+    expect(result).toBeNull()
+  })
+
+  test("submit rejects invalid option values", async () => {
+    const caller = createTestCaller(appRouter)
+    const project = await createProject(caller)
+
+    await expect(
+      caller.questionnaires.submit({
+        projectId: project.id,
+        answers: {
+          workType: ["interior"],
+          interiorWork: ["not_a_real_value"]
+        }
+      } as any)
+    ).rejects.toThrow()
+
+    const result = await caller.questionnaires.getByProject({ projectId: project.id })
+    expect(result).toBeNull()
   })
 
   test("delete removes questionnaire", async () => {
@@ -174,13 +226,39 @@ describe("questionnaires router", () => {
   test("saveDraft throws NOT_FOUND for missing project", async () => {
     const caller = createTestCaller(appRouter)
 
-    expect(
+    await expect(
       caller.questionnaires.saveDraft({
         projectId: "missing-project",
         answers: { workType: ["interior"] },
         currentIndex: 0
       })
     ).rejects.toThrow("Project not found")
+  })
+
+  test("saveDraft rejects duplicate option values", async () => {
+    const caller = createTestCaller(appRouter)
+    const project = await createProject(caller)
+
+    await expect(
+      caller.questionnaires.saveDraft({
+        projectId: project.id,
+        answers: { workType: ["interior", "interior"] },
+        currentIndex: 0
+      })
+    ).rejects.toThrow("Duplicate option values are not allowed")
+  })
+
+  test("saveDraft rejects invalid option values", async () => {
+    const caller = createTestCaller(appRouter)
+    const project = await createProject(caller)
+
+    await expect(
+      caller.questionnaires.saveDraft({
+        projectId: project.id,
+        answers: { workType: ["interior"], interiorWork: ["not_a_real_value"] },
+        currentIndex: 0
+      } as any)
+    ).rejects.toThrow()
   })
 
   test("saveDraft updates an existing draft", async () => {

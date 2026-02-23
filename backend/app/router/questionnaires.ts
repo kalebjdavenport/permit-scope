@@ -1,15 +1,13 @@
 import { determinePermitRequirement } from "#app/logic/index.ts"
 import { SAVE_DRAFT_SCHEMA, SUBMIT_QUESTIONNAIRE_SCHEMA } from "#app/schemas/questionnaire.ts"
-import { procedure, router } from "#core/trpc.ts"
+import { type createContext, procedure, router } from "#core/trpc.ts"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 
-type ProjectForPermitDecision = { location: string }
+type TrpcContext = Awaited<ReturnType<typeof createContext>>
+const PROJECT_ID_INPUT = z.object({ projectId: z.string().min(1) })
 
-function requireProject(
-  ctx: { cradle: { projects: { get: (id: string) => ProjectForPermitDecision | undefined } } },
-  projectId: string
-) {
+function getProjectOrThrow(ctx: TrpcContext, projectId: string) {
   const project = ctx.cradle.projects.get(projectId)
   if (!project) {
     throw new TRPCError({ code: "NOT_FOUND", message: "Project not found." })
@@ -17,19 +15,22 @@ function requireProject(
   return project
 }
 
+const getByProjectId = (ctx: TrpcContext, projectId: string) =>
+  ctx.cradle.questionnaires.getByProjectId(projectId)
+
 export const questionnaires = router({
   getByProject: procedure
-    .input(z.object({ projectId: z.string() }))
+    .input(PROJECT_ID_INPUT)
     .query(({ ctx, input }) => {
-      const item = ctx.cradle.questionnaires.getByProjectId(input.projectId)
+      const item = getByProjectId(ctx, input.projectId)
       return item ? ctx.cradle.questionnaires.toModel(item) : null
     }),
 
   saveDraft: procedure
     .input(SAVE_DRAFT_SCHEMA)
     .mutation(({ ctx, input }) => {
-      requireProject(ctx, input.projectId)
-      const existing = ctx.cradle.questionnaires.getByProjectId(input.projectId)
+      getProjectOrThrow(ctx, input.projectId)
+      const existing = getByProjectId(ctx, input.projectId)
 
       // Don't overwrite a submitted record with a draft (prevents race with trailing debounce)
       if (existing?.status === "submitted") {
@@ -48,7 +49,7 @@ export const questionnaires = router({
   submit: procedure
     .input(SUBMIT_QUESTIONNAIRE_SCHEMA)
     .mutation(({ ctx, input }) => {
-      const project = requireProject(ctx, input.projectId)
+      const project = getProjectOrThrow(ctx, input.projectId)
 
       const permitResult = determinePermitRequirement(input.answers, project.location)
       const item = ctx.cradle.questionnaires.upsertByProjectId(input.projectId, {
@@ -61,9 +62,9 @@ export const questionnaires = router({
     }),
 
   reopenDraft: procedure
-    .input(z.object({ projectId: z.string().min(1) }))
+    .input(PROJECT_ID_INPUT)
     .mutation(({ ctx, input }) => {
-      const existing = ctx.cradle.questionnaires.getByProjectId(input.projectId)
+      const existing = getByProjectId(ctx, input.projectId)
       if (!existing) {
         throw new TRPCError({ code: "NOT_FOUND", message: "No questionnaire found." })
       }
@@ -73,9 +74,9 @@ export const questionnaires = router({
     }),
 
   delete: procedure
-    .input(z.object({ projectId: z.string() }))
+    .input(PROJECT_ID_INPUT)
     .mutation(({ ctx, input }) => {
-      const existing = ctx.cradle.questionnaires.getByProjectId(input.projectId)
+      const existing = getByProjectId(ctx, input.projectId)
       if (existing) {
         ctx.cradle.questionnaires.remove(existing.id)
       }
