@@ -19,6 +19,7 @@ export const questionnaires = router({
 
       // Don't overwrite a submitted record with a draft (prevents race with trailing debounce)
       if (existing?.status === "submitted") {
+        console.log("[saveDraft] skipped — already submitted", input.projectId)
         return ctx.cradle.questionnaires.toModel(existing)
       }
 
@@ -31,6 +32,7 @@ export const questionnaires = router({
           permitResult: null
         }
         ctx.cradle.questionnaires.update(existing.id, updated)
+        console.log("[saveDraft] updated", { projectId: input.projectId, currentIndex: input.currentIndex, answers: input.answers })
         return ctx.cradle.questionnaires.toModel(updated)
       }
 
@@ -41,6 +43,7 @@ export const questionnaires = router({
         status: "draft",
         permitResult: null
       })
+      console.log("[saveDraft] created", { projectId: input.projectId, currentIndex: input.currentIndex, answers: input.answers })
       return ctx.cradle.questionnaires.toModel(created)
     }),
 
@@ -64,6 +67,7 @@ export const questionnaires = router({
           permitResult
         }
         ctx.cradle.questionnaires.update(existing.id, updated)
+        console.log("[submit] updated", { projectId: input.projectId, permitResult, answers: input.answers })
         return ctx.cradle.questionnaires.toModel(updated)
       }
 
@@ -74,6 +78,7 @@ export const questionnaires = router({
         currentIndex: 0,
         permitResult
       })
+      console.log("[submit] created", { projectId: input.projectId, permitResult, answers: input.answers })
       return ctx.cradle.questionnaires.toModel(created)
     }),
 

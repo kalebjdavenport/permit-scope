@@ -21,6 +21,11 @@ export function useQuestionnaireApi(projectId: string, actorRef: ActorRef) {
   const answers = QuestionnaireContext.useSelector((s) => s.context.answers)
   const currentIndex = QuestionnaireContext.useSelector((s) => s.context.currentIndex)
 
+  // Log XState transitions
+  useEffect(() => {
+    console.log("[xstate]", stateValue, { answers, currentIndex })
+  }, [stateValue, answers, currentIndex])
+
   const { data: existing, isLoading } = useQuery(
     trpc.questionnaires.getByProject.queryOptions({ projectId })
   )
