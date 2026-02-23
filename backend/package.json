@@ -5,7 +5,8 @@
   "sideEffects": false,
   "exports": {
     ".": "./app/index.ts",
-    "./schemas": "./app/schemas/index.ts"
+    "./schemas": "./app/schemas/index.ts",
+    "./logic": "./app/logic/index.ts"
   },
   "scripts": {
     "dev": "bun run --hot src/index.ts"

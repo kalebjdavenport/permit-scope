@@ -1,0 +1,104 @@
+import type { PermitOutcome } from "@permitflow/backend/logic"
+import { assign, setup } from "xstate"
+import { type QuestionDefinition, getActiveQuestions } from "./definition"
+
+type Context = {
+  answers: Record<string, string[]>
+  currentIndex: number
+  permitResult: PermitOutcome | null
+}
+
+export type Events =
+  | { type: "START" }
+  | { type: "LOAD_EXISTING"; answers: Record<string, string[]>; permitResult: PermitOutcome }
+  | { type: "SET_ANSWER"; questionId: string; values: string[] }
+  | { type: "NEXT" }
+  | { type: "BACK" }
+  | { type: "SUBMIT" }
+  | { type: "SUBMIT_SUCCESS"; permitResult: PermitOutcome }
+  | { type: "SUBMIT_ERROR" }
+  | { type: "START_OVER" }
+  | { type: "DELETE_SUCCESS" }
+  | { type: "DELETE_ERROR" }
+
+const initialContext: Context = {
+  answers: {},
+  currentIndex: 0,
+  permitResult: null
+}
+
+export const createQuestionnaireMachine = (questions: QuestionDefinition[]) =>
+  setup({
+    types: {
+      context: {} as Context,
+      events: {} as Events
+    },
+    guards: {
+      hasNext: ({ context }) => {
+        const active = getActiveQuestions(questions, context.answers)
+        return context.currentIndex < active.length - 1
+      },
+      hasPrev: ({ context }) => context.currentIndex > 0,
+      allAnswered: ({ context }) => {
+        const active = getActiveQuestions(questions, context.answers)
+        return active.every((q) => (context.answers[q.id]?.length ?? 0) > 0)
+      }
+    }
+  }).createMachine({
+    id: "questionnaire",
+    initial: "idle",
+    context: initialContext,
+    states: {
+      idle: {
+        on: {
+          START: { target: "answering", actions: assign(() => initialContext) },
+          LOAD_EXISTING: {
+            target: "submitted",
+            actions: assign(({ event }) => ({
+              answers: event.answers,
+              currentIndex: 0,
+              permitResult: event.permitResult
+            }))
+          }
+        }
+      },
+      answering: {
+        on: {
+          SET_ANSWER: {
+            actions: assign(({ context, event }) => {
+              const next = { ...context.answers, [event.questionId]: event.values }
+              const active = getActiveQuestions(questions, next)
+              return {
+                answers: next,
+                currentIndex: Math.min(context.currentIndex, active.length - 1),
+                permitResult: context.permitResult
+              }
+            })
+          },
+          NEXT: { guard: "hasNext", actions: assign(({ context }) => ({ currentIndex: context.currentIndex + 1 })) },
+          BACK: { guard: "hasPrev", actions: assign(({ context }) => ({ currentIndex: context.currentIndex - 1 })) },
+          SUBMIT: { guard: "allAnswered", target: "submitting" }
+        }
+      },
+      submitting: {
+        on: {
+          SUBMIT_SUCCESS: {
+            target: "submitted",
+            actions: assign(({ event }) => ({ permitResult: event.permitResult }))
+          },
+          SUBMIT_ERROR: { target: "answering" }
+        }
+      },
+      submitted: {
+        on: {
+          START_OVER: { target: "deleting" }
+        }
+      },
+      deleting: {
+        on: {
+          DELETE_SUCCESS: { target: "idle", actions: assign(() => initialContext) },
+          DELETE_ERROR: { target: "submitted" }
+        }
+      }
+    }
+  })

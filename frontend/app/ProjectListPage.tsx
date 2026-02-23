@@ -1,6 +1,6 @@
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Breadcrumb, BreadcrumbItem, BreadcrumbList } from "@/components/ui/breadcrumb"
+import { BlurFade } from "@/components/magicui/blur-fade"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { trpc } from "@/lib/trpc"
 import { useQuery } from "@tanstack/react-query"
 import { Link } from "react-router"
@@ -8,21 +8,20 @@ import { Heading } from "./Heading"
 
 export function ProjectListPage() {
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-4">
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <Link to="/projects">Projects</Link>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-        <Button asChild>
-          <Link to="/projects/new">Create Project</Link>
-        </Button>
-      </div>
-
-      <Heading>Projects</Heading>
+    <div className="flex flex-col gap-6">
+      <BlurFade>
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <Heading>Projects</Heading>
+            <p className="text-muted-foreground text-sm -mt-1">
+              Manage your construction permit applications
+            </p>
+          </div>
+          <Button asChild>
+            <Link to="/projects/new">New Project</Link>
+          </Button>
+        </div>
+      </BlurFade>
 
       <ProjectList />
     </div>
@@ -32,24 +31,41 @@ export function ProjectListPage() {
 function ProjectList() {
   const { data } = useQuery(trpc.projects.list.queryOptions())
 
+  if (!data) return null
+
+  if (data.length === 0) {
+    return (
+      <BlurFade delay={0.1}>
+        <Card className="border-dashed">
+          <CardContent className="py-10 text-center">
+            <p className="text-muted-foreground text-sm">
+              No projects yet. Create one to get started.
+            </p>
+            <Button asChild className="mt-4">
+              <Link to="/projects/new">Create Your First Project</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </BlurFade>
+    )
+  }
+
   return (
-    <>
-      <Alert variant="default">
-        <AlertTitle>Assignment Instructions</AlertTitle>
-        <AlertDescription>
-          Your take-home assignment response will go inside of a project.{" "}
-          {data?.length === 0 && "Create a project to get started."}
-          {!!data?.length && "Click into a project to get started."}
-        </AlertDescription>
-      </Alert>
-      {data?.map((project) => (
-        <Button asChild key={project.id} variant="ghost" className="w-auto justify-start">
-          <Link to={`/projects/${project.id}`}>{project.name}</Link>
-        </Button>
+    <div className="grid gap-3">
+      {data.map((project, i) => (
+        <BlurFade key={project.id} delay={0.05 * i}>
+          <Link to={`/projects/${project.id}`} className="block">
+            <Card className="transition-colors hover:border-primary/30 hover:shadow-md cursor-pointer">
+              <CardHeader>
+                <CardTitle>{project.name}</CardTitle>
+                <CardDescription>
+                  Created {new Date(project.createdAt).toLocaleDateString()}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+        </BlurFade>
       ))}
-      {data?.length === 0 && (
-        <div className="text-sm text-muted-foreground">No projects found!</div>
-      )}
-    </>
+    </div>
   )
 }

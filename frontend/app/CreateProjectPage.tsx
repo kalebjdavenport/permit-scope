@@ -1,3 +1,4 @@
+import { BlurFade } from "@/components/magicui/blur-fade"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -6,6 +7,7 @@ import {
   BreadcrumbSeparator
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 import {
   Form,
   FormControl,
@@ -37,8 +39,18 @@ export function CreateProjectPage() {
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
-      <Heading>Create Project</Heading>
-      <ProjectForm />
+
+      <BlurFade>
+        <Heading>Create Project</Heading>
+      </BlurFade>
+
+      <BlurFade delay={0.1}>
+        <Card className="max-w-lg">
+          <CardContent className="pt-6">
+            <ProjectForm />
+          </CardContent>
+        </Card>
+      </BlurFade>
     </div>
   )
 }
@@ -60,10 +72,7 @@ function ProjectForm() {
   const onSubmit = async (data: CreateProjectSchema) => {
     try {
       const project = await createProject(data)
-
-      // Invalidate the projects query to refetch the latest data
       queryClient.invalidateQueries({ queryKey: trpc.projects.pathKey() })
-
       navigate(`/projects/${project.id}`)
     } catch (error) {
       console.error(error)
