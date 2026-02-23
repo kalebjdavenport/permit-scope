@@ -38,7 +38,9 @@ export function Questionnaire({ projectId }: Props) {
     )
   }
 
-  if (stateValue === "submitted" || stateValue === "deleting" || stateValue === "reopening") {
+  // Submitted state: result + actions
+  const showResult = stateValue === "submitted" || stateValue === "deleting" || stateValue === "reopening"
+  if (showResult) {
     const busy = stateValue === "deleting" || stateValue === "reopening"
     return (
       <div className="flex flex-col gap-4">
@@ -75,9 +77,7 @@ export function Questionnaire({ projectId }: Props) {
   return (
     <Card>
       <CardContent className="flex flex-col gap-5 pt-6">
-        {!isFirst && (
-          <ProgressBar progress={progress} current={currentIndex + 1} total={active.length} />
-        )}
+        {!isFirst && <ProgressBar progress={progress} />}
 
         <div className="min-h-[200px]">
           {current && (

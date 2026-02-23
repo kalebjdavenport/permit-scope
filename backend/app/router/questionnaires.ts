@@ -19,32 +19,16 @@ export const questionnaires = router({
 
       // Don't overwrite a submitted record with a draft (prevents race with trailing debounce)
       if (existing?.status === "submitted") {
-        console.log("[saveDraft] skipped — already submitted", input.projectId)
         return ctx.cradle.questionnaires.toModel(existing)
       }
 
-      if (existing) {
-        const updated = {
-          ...existing,
-          answers: input.answers,
-          currentIndex: input.currentIndex,
-          status: "draft" as const,
-          permitResult: null
-        }
-        ctx.cradle.questionnaires.update(existing.id, updated)
-        console.log("[saveDraft] updated", { projectId: input.projectId, currentIndex: input.currentIndex, answers: input.answers })
-        return ctx.cradle.questionnaires.toModel(updated)
-      }
-
-      const created = ctx.cradle.questionnaires.add({
-        projectId: input.projectId,
+      const item = ctx.cradle.questionnaires.upsertByProjectId(input.projectId, {
         answers: input.answers,
         currentIndex: input.currentIndex,
         status: "draft",
         permitResult: null
       })
-      console.log("[saveDraft] created", { projectId: input.projectId, currentIndex: input.currentIndex, answers: input.answers })
-      return ctx.cradle.questionnaires.toModel(created)
+      return ctx.cradle.questionnaires.toModel(item)
     }),
 
   submit: procedure
@@ -56,30 +40,13 @@ export const questionnaires = router({
       }
 
       const permitResult = determinePermitRequirement(input.answers, project.location)
-      const existing = ctx.cradle.questionnaires.getByProjectId(input.projectId)
-
-      if (existing) {
-        const updated = {
-          ...existing,
-          answers: input.answers,
-          status: "submitted" as const,
-          currentIndex: 0,
-          permitResult
-        }
-        ctx.cradle.questionnaires.update(existing.id, updated)
-        console.log("[submit] updated", { projectId: input.projectId, permitResult, answers: input.answers })
-        return ctx.cradle.questionnaires.toModel(updated)
-      }
-
-      const created = ctx.cradle.questionnaires.add({
-        projectId: input.projectId,
+      const item = ctx.cradle.questionnaires.upsertByProjectId(input.projectId, {
         answers: input.answers,
         status: "submitted",
         currentIndex: 0,
         permitResult
       })
-      console.log("[submit] created", { projectId: input.projectId, permitResult, answers: input.answers })
-      return ctx.cradle.questionnaires.toModel(created)
+      return ctx.cradle.questionnaires.toModel(item)
     }),
 
   reopenDraft: procedure
@@ -91,7 +58,6 @@ export const questionnaires = router({
       }
       const updated = { ...existing, status: "draft" as const, currentIndex: 0 }
       ctx.cradle.questionnaires.update(existing.id, updated)
-      console.log("[reopenDraft]", input.projectId)
       return ctx.cradle.questionnaires.toModel(updated)
     }),
 

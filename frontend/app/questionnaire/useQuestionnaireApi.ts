@@ -6,25 +6,32 @@ import { scopeOfWorkQuestions, scrubAnswers } from "./definition"
 
 type ActorRef = ReturnType<typeof QuestionnaireContext.useActorRef>
 
+/** Runs an async effect when the machine enters a target state. */
+function useOnState(
+  stateValue: string,
+  targetState: string,
+  run: () => Promise<void>
+) {
+  useEffect(() => {
+    if (stateValue !== targetState) return
+    run().catch(() => { /* handled by caller */ })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stateValue])
+}
+
 /**
  * Bridges the XState machine with the tRPC API layer.
- * Reacts to machine state transitions (submitting, deleting) by firing
- * API calls, then sends success/error events back to the machine.
+ * Reacts to machine state transitions (submitting, deleting, reopening) by
+ * firing API calls, then sends success/error events back to the machine.
  * Also hydrates the machine with existing data on first load.
  */
 export function useQuestionnaireApi(projectId: string, actorRef: ActorRef) {
   const queryClient = useQueryClient()
-  // Prevents re-dispatching LOAD_EXISTING/LOAD_DRAFT if React Query refetches
   const loadedRef = useRef(false)
 
   const stateValue = QuestionnaireContext.useSelector((s) => s.value)
   const answers = QuestionnaireContext.useSelector((s) => s.context.answers)
   const currentIndex = QuestionnaireContext.useSelector((s) => s.context.currentIndex)
-
-  // Log XState transitions
-  useEffect(() => {
-    console.log("[xstate]", stateValue, { answers, currentIndex })
-  }, [stateValue, answers, currentIndex])
 
   const { data: existing, isLoading } = useQuery(
     trpc.questionnaires.getByProject.queryOptions({ projectId })
@@ -56,7 +63,7 @@ export function useQuestionnaireApi(projectId: string, actorRef: ActorRef) {
     }
   }, [existing, isLoading, actorRef])
 
-  // Auto-save draft with 1s debounce when answering
+  // Debounced draft save — fires 1s after last answer/navigation change
   useEffect(() => {
     if (stateValue !== "answering") return
     if (Object.keys(answers).length === 0) return
@@ -67,63 +74,41 @@ export function useQuestionnaireApi(projectId: string, actorRef: ActorRef) {
     return () => clearTimeout(timer)
   }, [answers, currentIndex]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fire submit API call when machine enters "submitting" state.
-  // Deps intentionally limited to stateValue — we only want to fire once per transition.
-  useEffect(() => {
-    if (stateValue !== "submitting") return
-    let cancelled = false
+  // Submit when entering "submitting"
+  useOnState(stateValue, "submitting", async () => {
     const snap = actorRef.getSnapshot()
     const scrubbed = scrubAnswers(snap.context.answers, scopeOfWorkQuestions)
-    submitMutation.mutateAsync({ projectId, answers: scrubbed }).then(
-      (result) => {
-        if (cancelled) return
-        queryClient.invalidateQueries({ queryKey })
-        actorRef.send({ type: "SUBMIT_SUCCESS", permitResult: result.permitResult! })
-      },
-      () => {
-        if (cancelled) return
-        actorRef.send({ type: "SUBMIT_ERROR" })
-      }
-    )
-    return () => { cancelled = true }
-  }, [stateValue]) // eslint-disable-line react-hooks/exhaustive-deps
+    try {
+      const result = await submitMutation.mutateAsync({ projectId, answers: scrubbed })
+      queryClient.invalidateQueries({ queryKey })
+      actorRef.send({ type: "SUBMIT_SUCCESS", permitResult: result.permitResult! })
+    } catch {
+      actorRef.send({ type: "SUBMIT_ERROR" })
+    }
+  })
 
-  // Fire delete API call when machine enters "deleting" state
-  useEffect(() => {
-    if (stateValue !== "deleting") return
-    let cancelled = false
-    deleteMutation.mutateAsync({ projectId }).then(
-      () => {
-        if (cancelled) return
-        queryClient.invalidateQueries({ queryKey })
-        loadedRef.current = false // Allow re-hydration after start over
-        actorRef.send({ type: "DELETE_SUCCESS" })
-      },
-      () => {
-        if (cancelled) return
-        actorRef.send({ type: "DELETE_ERROR" })
-      }
-    )
-    return () => { cancelled = true }
-  }, [stateValue]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Delete when entering "deleting"
+  useOnState(stateValue, "deleting", async () => {
+    try {
+      await deleteMutation.mutateAsync({ projectId })
+      queryClient.invalidateQueries({ queryKey })
+      loadedRef.current = false
+      actorRef.send({ type: "DELETE_SUCCESS" })
+    } catch {
+      actorRef.send({ type: "DELETE_ERROR" })
+    }
+  })
 
-  // Fire reopen API call when machine enters "reopening" state
-  useEffect(() => {
-    if (stateValue !== "reopening") return
-    let cancelled = false
-    reopenMutation.mutateAsync({ projectId }).then(
-      () => {
-        if (cancelled) return
-        queryClient.invalidateQueries({ queryKey })
-        actorRef.send({ type: "REOPEN_SUCCESS" })
-      },
-      () => {
-        if (cancelled) return
-        actorRef.send({ type: "REOPEN_ERROR" })
-      }
-    )
-    return () => { cancelled = true }
-  }, [stateValue]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Reopen draft when entering "reopening"
+  useOnState(stateValue, "reopening", async () => {
+    try {
+      await reopenMutation.mutateAsync({ projectId })
+      queryClient.invalidateQueries({ queryKey })
+      actorRef.send({ type: "REOPEN_SUCCESS" })
+    } catch {
+      actorRef.send({ type: "REOPEN_ERROR" })
+    }
+  })
 
   return { isLoading }
 }

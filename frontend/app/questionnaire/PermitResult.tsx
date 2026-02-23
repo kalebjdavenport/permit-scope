@@ -1,52 +1,37 @@
 import { BlurFade } from "@/components/magicui/blur-fade"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { PermitOutcome } from "@permitflow/backend/logic"
+import { OUTCOME_META } from "./outcomeMeta"
 
-const RESULTS: Record<PermitOutcome, { title: string; items: string[]; style: string }> = {
-  in_house_review: {
-    title: "In-House Review Process",
-    style: "border-warning/50",
-    items: [
-      "A building permit is required.",
-      "Include plan sets.",
-      "Submit application for in-house review."
-    ]
-  },
-  otc_review: {
-    title: "Over-the-Counter Submission Process",
-    style: "border-info/50",
-    items: [
-      "A building permit is required.",
-      "Submit application for OTC review."
-    ]
-  },
-  no_permit: {
-    title: "No Permit",
-    style: "border-success/50",
-    items: [
-      "Nothing is required! You're set to build."
-    ]
-  }
+const RESULT_ITEMS: Record<PermitOutcome, string[]> = {
+  in_house_review: [
+    "A building permit is required.",
+    "Include plan sets.",
+    "Submit application for in-house review."
+  ],
+  otc_review: [
+    "A building permit is required.",
+    "Submit application for OTC review."
+  ],
+  no_permit: [
+    "Nothing is required! You're set to build."
+  ]
 }
 
-type Props = {
-  permitResult: PermitOutcome
-}
+type Props = { permitResult: PermitOutcome }
 
 export function PermitResult({ permitResult }: Props) {
-  const result = RESULTS[permitResult]
+  const meta = OUTCOME_META[permitResult]
 
   return (
     <BlurFade>
-      <Card role="alert" aria-live="assertive" className={result.style}>
+      <Card role="alert" aria-live="assertive" className={meta.borderStyle}>
         <CardHeader>
-          <CardTitle>
-            <h3 className="text-lg font-semibold">{result.title}</h3>
-          </CardTitle>
+          <CardTitle className="text-lg">{meta.label}</CardTitle>
         </CardHeader>
         <CardContent>
           <ul className="list-disc list-inside space-y-1 text-sm">
-            {result.items.map((item, i) => (
+            {RESULT_ITEMS[permitResult].map((item, i) => (
               <li key={i}>{item}</li>
             ))}
           </ul>

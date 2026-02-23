@@ -9,6 +9,9 @@ type Props = {
   onChange: (values: string[]) => void
 }
 
+const optionLabelClass =
+  "flex items-center gap-3 rounded-md p-3 cursor-pointer hover:bg-accent transition-colors"
+
 function MultiSelect({ definition, values, onChange }: Props) {
   return (
     <div className="flex flex-col gap-1">
@@ -16,7 +19,7 @@ function MultiSelect({ definition, values, onChange }: Props) {
         <Label
           key={opt.value}
           htmlFor={`${definition.id}-${opt.value}`}
-          className="flex items-center gap-3 rounded-md p-3 cursor-pointer hover:bg-accent transition-colors"
+          className={optionLabelClass}
         >
           <Checkbox
             id={`${definition.id}-${opt.value}`}
@@ -43,7 +46,7 @@ function SingleSelect({ definition, values, onChange }: Props) {
         <Label
           key={opt.value}
           htmlFor={`${definition.id}-${opt.value}`}
-          className="flex items-center gap-3 rounded-md p-3 cursor-pointer hover:bg-accent transition-colors"
+          className={optionLabelClass}
         >
           <RadioGroupItem value={opt.value} id={`${definition.id}-${opt.value}`} />
           <span>{opt.label}</span>

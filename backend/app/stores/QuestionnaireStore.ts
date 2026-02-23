@@ -18,6 +18,17 @@ export class QuestionnaireStore extends Store<Questionnaire> {
     return this.getAll().find((item) => item.projectId === projectId)
   }
 
+  /** Find by projectId, then update or create. Returns the persisted entity. */
+  upsertByProjectId(projectId: string, data: Omit<Questionnaire, keyof StoreItem | "projectId">) {
+    const existing = this.getByProjectId(projectId)
+    if (existing) {
+      const updated = { ...existing, ...data }
+      this.update(existing.id, updated)
+      return updated
+    }
+    return this.add({ projectId, ...data })
+  }
+
   toModel(item: Questionnaire) {
     const model = super.toModel(item)
 

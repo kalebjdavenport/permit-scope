@@ -31,7 +31,7 @@ const initialContext: Context = {
   permitResult: null
 }
 
-/** Timeout before auto-recovering from stuck submitting/deleting states */
+/** Auto-recover if the network/API never responds (submitting, deleting, reopening) */
 const API_TIMEOUT_MS = 30_000
 
 export const createQuestionnaireMachine = (questions: QuestionDefinition[]) =>
@@ -120,6 +120,7 @@ export const createQuestionnaireMachine = (questions: QuestionDefinition[]) =>
       reopening: {
         after: { [API_TIMEOUT_MS]: { target: "submitted" } },
         on: {
+          // Keep existing answers, reset to first question for editing
           REOPEN_SUCCESS: {
             target: "answering",
             actions: assign(({ context }) => ({
