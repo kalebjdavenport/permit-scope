@@ -4,7 +4,7 @@ import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 
 export const projects = router({
-  get: procedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
+  get: procedure.input(z.object({ id: z.string() })).query(({ ctx, input }) => {
     const project = ctx.cradle.projects.get(input.id)
 
     if (!project) {
@@ -14,16 +14,11 @@ export const projects = router({
       })
     }
 
-    return project
+    return ctx.cradle.projects.toModel(project)
   }),
 
-  list: procedure.query(async ({ ctx }) => {
-    const records = ctx.cradle.projects.getAll()
-    return records.map((record) => ({
-      id: record.id,
-      createdAt: record.createdAt,
-      name: record.name
-    }))
+  list: procedure.query(({ ctx }) => {
+    return ctx.cradle.projects.getAll().map((p) => ctx.cradle.projects.toModel(p))
   }),
 
   create: procedure.input(CREATE_PROJECT_SCHEMA).mutation(({ ctx, input }) => {

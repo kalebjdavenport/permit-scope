@@ -1,4 +1,6 @@
 import { Alert, AlertDescription } from "@/components/ui/alert"
+// Reuses backend logic to show a live preview of the permit outcome as
+// the user answers questions. The backend remains authoritative on submit.
 import { determinePermitRequirement, type PermitOutcome } from "@permitflow/backend/logic"
 import { scopeOfWorkQuestions, scrubAnswers } from "./definition"
 

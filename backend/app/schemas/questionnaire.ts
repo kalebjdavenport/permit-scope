@@ -1,5 +1,10 @@
 import { z } from "zod"
 
+/**
+ * Allowlist of valid question IDs and their accepted option values.
+ * Must stay in sync with the question definitions in frontend/app/questionnaire/definition.ts.
+ * Used by the submit schema to reject unknown or tampered answers.
+ */
 const VALID_QUESTION_OPTIONS: Record<string, string[]> = {
   workType: ["interior", "exterior", "additions"],
   interiorWork: [

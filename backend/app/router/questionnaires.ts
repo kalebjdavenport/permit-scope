@@ -20,15 +20,14 @@ export const questionnaires = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Project not found." })
       }
 
+      // Use server-side project location, never trust client-sent location
       const permitResult = determinePermitRequirement(input.answers, project.location)
       const existing = ctx.cradle.questionnaires.getByProjectId(input.projectId)
 
       if (existing) {
-        ctx.cradle.questionnaires.update(existing.id, {
-          answers: input.answers,
-          permitResult
-        })
-        return ctx.cradle.questionnaires.toModel(ctx.cradle.questionnaires.get(existing.id)!)
+        const updated = { ...existing, answers: input.answers, permitResult }
+        ctx.cradle.questionnaires.update(existing.id, updated)
+        return ctx.cradle.questionnaires.toModel(updated)
       }
 
       const created = ctx.cradle.questionnaires.add({

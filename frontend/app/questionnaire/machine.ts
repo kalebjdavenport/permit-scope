@@ -68,6 +68,8 @@ export const createQuestionnaireMachine = (questions: QuestionDefinition[]) =>
             actions: assign(({ context, event }) => {
               const next = { ...context.answers, [event.questionId]: event.values }
               const active = getActiveQuestions(questions, next)
+              // Clamp index: if an answer deactivates a later question, the current
+              // index might exceed the new active list length
               return {
                 answers: next,
                 currentIndex: Math.min(context.currentIndex, active.length - 1),

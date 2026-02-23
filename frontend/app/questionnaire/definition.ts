@@ -68,6 +68,11 @@ export function getActiveQuestions(
   return questions.filter((q) => q.isActive(answers))
 }
 
+/**
+ * Strips answers for questions that are no longer active. E.g. if the user
+ * selected "interior" then answered interior details, then deselected "interior",
+ * the interior answers are removed before submitting to the backend.
+ */
 export function scrubAnswers(
   answers: Record<string, string[]>,
   questions: QuestionDefinition[]
