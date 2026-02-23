@@ -1,15 +1,10 @@
 import { trpc } from "@/lib/trpc"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef } from "react"
+import { QuestionnaireContext } from "./context"
 import { scopeOfWorkQuestions, scrubAnswers } from "./definition"
-import type { Events } from "./machine"
 
-type StateLike = {
-  value: string
-  context: { answers: Record<string, string[]> }
-}
-
-type Send = (event: Events) => void
+type ActorRef = ReturnType<typeof QuestionnaireContext.useActorRef>
 
 /**
  * Bridges the XState machine with the tRPC API layer.
@@ -17,10 +12,11 @@ type Send = (event: Events) => void
  * API calls, then sends success/error events back to the machine.
  * Also hydrates the machine with existing data on first load.
  */
-export function useQuestionnaireApi(projectId: string, state: StateLike, send: Send) {
+export function useQuestionnaireApi(projectId: string, actorRef: ActorRef) {
   const queryClient = useQueryClient()
-  // Prevents re-dispatching LOAD_EXISTING if React Query refetches
   const loadedRef = useRef(false)
+
+  const stateValue = QuestionnaireContext.useSelector((s) => s.value)
 
   const { data: existing, isLoading } = useQuery(
     trpc.questionnaires.getByProject.queryOptions({ projectId })
@@ -34,35 +30,39 @@ export function useQuestionnaireApi(projectId: string, state: StateLike, send: S
   useEffect(() => {
     if (loadedRef.current || isLoading || !existing) return
     loadedRef.current = true
-    send({ type: "LOAD_EXISTING", answers: existing.answers, permitResult: existing.permitResult })
-  }, [existing, isLoading, send])
+    actorRef.send({
+      type: "LOAD_EXISTING",
+      answers: existing.answers,
+      permitResult: existing.permitResult
+    })
+  }, [existing, isLoading, actorRef])
 
-  // Fire submit API call when machine enters "submitting" state.
-  // Deps intentionally limited to state.value — we only want to fire once per transition.
+  // Fire submit API call when machine enters "submitting" state
   useEffect(() => {
-    if (state.value !== "submitting") return
-    const scrubbed = scrubAnswers(state.context.answers, scopeOfWorkQuestions)
+    if (stateValue !== "submitting") return
+    const snap = actorRef.getSnapshot()
+    const scrubbed = scrubAnswers(snap.context.answers, scopeOfWorkQuestions)
     submitMutation.mutateAsync({ projectId, answers: scrubbed }).then(
       (result) => {
         queryClient.invalidateQueries({ queryKey })
-        send({ type: "SUBMIT_SUCCESS", permitResult: result.permitResult })
+        actorRef.send({ type: "SUBMIT_SUCCESS", permitResult: result.permitResult })
       },
-      () => send({ type: "SUBMIT_ERROR" })
+      () => actorRef.send({ type: "SUBMIT_ERROR" })
     )
-  }, [state.value]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [stateValue]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fire delete API call when machine enters "deleting" state
   useEffect(() => {
-    if (state.value !== "deleting") return
+    if (stateValue !== "deleting") return
     deleteMutation.mutateAsync({ projectId }).then(
       () => {
         queryClient.invalidateQueries({ queryKey })
-        loadedRef.current = false // Allow re-hydration after start over
-        send({ type: "DELETE_SUCCESS" })
+        loadedRef.current = false
+        actorRef.send({ type: "DELETE_SUCCESS" })
       },
-      () => send({ type: "DELETE_ERROR" })
+      () => actorRef.send({ type: "DELETE_ERROR" })
     )
-  }, [state.value]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [stateValue]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return { isLoading }
 }

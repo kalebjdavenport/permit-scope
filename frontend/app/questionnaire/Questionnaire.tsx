@@ -2,22 +2,24 @@ import { BlurFade } from "@/components/magicui/blur-fade"
 import { ShimmerButton } from "@/components/magicui/shimmer-button"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { useMachine } from "@xstate/react"
+import { QuestionnaireContext } from "./context"
 import { getActiveQuestions, scopeOfWorkQuestions } from "./definition"
-import { createQuestionnaireMachine } from "./machine"
-import { PermitBadge } from "./PermitBadge"
 import { PermitResult } from "./PermitResult"
 import { ProgressBar } from "./ProgressBar"
 import { QuestionStep } from "./QuestionStep"
 import { useQuestionnaireApi } from "./useQuestionnaireApi"
 
-const machine = createQuestionnaireMachine(scopeOfWorkQuestions)
+type Props = { projectId: string }
 
-type Props = { projectId: string; location: string }
+export function Questionnaire({ projectId }: Props) {
+  const actorRef = QuestionnaireContext.useActorRef()
+  const stateValue = QuestionnaireContext.useSelector((s) => s.value)
+  const answers = QuestionnaireContext.useSelector((s) => s.context.answers)
+  const currentIndex = QuestionnaireContext.useSelector((s) => s.context.currentIndex)
+  const permitResult = QuestionnaireContext.useSelector((s) => s.context.permitResult)
+  const send = actorRef.send
 
-export function Questionnaire({ projectId, location }: Props) {
-  const [state, send] = useMachine(machine)
-  const { isLoading } = useQuestionnaireApi(projectId, state, send)
+  const { isLoading } = useQuestionnaireApi(projectId, actorRef)
 
   if (isLoading) {
     return (
@@ -27,7 +29,7 @@ export function Questionnaire({ projectId, location }: Props) {
     )
   }
 
-  if (state.value === "idle") {
+  if (stateValue === "idle") {
     return (
       <BlurFade>
         <Button onClick={() => send({ type: "START" })}>Start Questionnaire</Button>
@@ -35,42 +37,38 @@ export function Questionnaire({ projectId, location }: Props) {
     )
   }
 
-  if (state.value === "submitted" || state.value === "deleting") {
+  if (stateValue === "submitted" || stateValue === "deleting") {
     return (
       <div className="flex flex-col gap-4">
-        <PermitResult permitResult={state.context.permitResult!} />
+        <PermitResult permitResult={permitResult!} />
         <Button
           variant="outline"
           onClick={() => send({ type: "START_OVER" })}
-          disabled={state.value === "deleting"}
+          disabled={stateValue === "deleting"}
         >
-          {state.value === "deleting" ? "Clearing..." : "Start Over"}
+          {stateValue === "deleting" ? "Clearing..." : "Start Over"}
         </Button>
       </div>
     )
   }
 
-  const active = getActiveQuestions(scopeOfWorkQuestions, state.context.answers)
-  const current = active[state.context.currentIndex]
-  const isLast = state.context.currentIndex === active.length - 1
-  const isFirst = state.context.currentIndex === 0
-  const progress = ((state.context.currentIndex + 1) / active.length) * 100
+  const active = getActiveQuestions(scopeOfWorkQuestions, answers)
+  const current = active[currentIndex]
+  const isLast = currentIndex === active.length - 1
+  const isFirst = currentIndex === 0
+  const progress = ((currentIndex + 1) / active.length) * 100
 
   return (
     <Card>
       <CardContent className="flex flex-col gap-5 pt-6">
-        <ProgressBar
-          progress={progress}
-          current={state.context.currentIndex + 1}
-          total={active.length}
-        />
+        <ProgressBar progress={progress} current={currentIndex + 1} total={active.length} />
 
         <div className="min-h-[200px]">
           {current && (
             <BlurFade key={current.id} duration={0.3}>
               <QuestionStep
                 definition={current}
-                values={state.context.answers[current.id] ?? []}
+                values={answers[current.id] ?? []}
                 onChange={(values) =>
                   send({ type: "SET_ANSWER", questionId: current.id, values })
                 }
@@ -78,8 +76,6 @@ export function Questionnaire({ projectId, location }: Props) {
             </BlurFade>
           )}
         </div>
-
-        <PermitBadge answers={state.context.answers} location={location} />
 
         <div className="flex gap-2">
           {!isFirst && (
@@ -90,8 +86,8 @@ export function Questionnaire({ projectId, location }: Props) {
           {isLast ? (
             <SubmitButton
               onClick={() => send({ type: "SUBMIT" })}
-              disabled={state.value === "submitting"}
-              submitting={state.value === "submitting"}
+              disabled={stateValue === "submitting"}
+              submitting={stateValue === "submitting"}
             />
           ) : (
             <Button onClick={() => send({ type: "NEXT" })}>Next</Button>

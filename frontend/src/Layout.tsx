@@ -11,6 +11,7 @@ export function Layout() {
           <span className="text-muted-foreground text-sm hidden sm:inline">
             Scope of Work
           </span>
+          <div className="ml-auto" id="permit-badge-slot" />
         </div>
       </nav>
       <main className="p-4 mx-auto max-w-screen-lg">
