@@ -1,6 +1,13 @@
+import { determinePermitRequirement, type PermitOutcome } from "@permitflow/backend/logic"
 import { createPortal } from "react-dom"
 import { QuestionnaireContext } from "./context"
-import { PermitBadge } from "./PermitBadge"
+import { scopeOfWorkQuestions, scrubAnswers } from "./definition"
+
+const LABELS: Record<PermitOutcome, string> = {
+  in_house_review: "In-House Review",
+  otc_review: "Over-the-Counter",
+  no_permit: "No Permit Required"
+}
 
 type Props = { location: string }
 
@@ -12,5 +19,22 @@ export function HeaderPermitBadge({ location }: Props) {
   if (!slot) return null
   if (stateValue !== "answering" && stateValue !== "submitting") return null
 
-  return createPortal(<PermitBadge answers={answers} location={location} />, slot)
+  const hasWorkType = (answers.workType?.length ?? 0) > 0
+  if (!hasWorkType) return null
+
+  const scrubbed = scrubAnswers(answers, scopeOfWorkQuestions)
+  const outcome = determinePermitRequirement(scrubbed, location)
+
+  return createPortal(
+    <div
+      className="flex items-center gap-2 rounded-md bg-muted px-3 py-1.5 text-sm"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <span className="text-muted-foreground">Likely outcome</span>
+      <span className="font-semibold text-foreground">{LABELS[outcome]}</span>
+    </div>,
+    slot
+  )
 }
