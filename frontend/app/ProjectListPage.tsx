@@ -1,8 +1,9 @@
 import { BlurFade } from "@/components/magicui/blur-fade"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { trpc } from "@/lib/trpc"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { Trash2 } from "lucide-react"
 import { Link } from "react-router"
 import { Heading } from "./Heading"
 
@@ -77,22 +78,23 @@ function ProjectCard({ project }: { project: { id: string; name: string; created
   return (
     <Link to={`/projects/${project.id}`} className="block">
       <Card className="transition-colors hover:border-primary/30 hover:shadow-md cursor-pointer">
-        <CardHeader className="flex-row items-center justify-between gap-4">
-          <div>
-            <CardTitle>{project.name}</CardTitle>
-            <CardDescription>
-              Created {new Date(project.createdAt).toLocaleDateString()}
-            </CardDescription>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-destructive hover:bg-destructive hover:text-destructive-foreground shrink-0"
-            onClick={handleDelete}
-            disabled={deleteMutation.isPending}
-          >
-            {deleteMutation.isPending ? "Deleting..." : "Delete"}
-          </Button>
+        <CardHeader>
+          <CardTitle>{project.name}</CardTitle>
+          <CardDescription>
+            Created {new Date(project.createdAt).toLocaleDateString()}
+          </CardDescription>
+          <CardAction>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-destructive cursor-pointer"
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+              aria-label="Delete project"
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          </CardAction>
         </CardHeader>
       </Card>
     </Link>
