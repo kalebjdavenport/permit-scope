@@ -17,3 +17,11 @@ export const SUBMIT_QUESTIONNAIRE_SCHEMA = z.object({
 })
 
 export type SubmitQuestionnaireSchema = z.infer<typeof SUBMIT_QUESTIONNAIRE_SCHEMA>
+
+export const SAVE_DRAFT_SCHEMA = z.object({
+  projectId: z.string().min(1),
+  answers: z.record(z.string(), z.array(z.string())),
+  currentIndex: z.number().int().min(0)
+})
+
+export type SaveDraftSchema = z.infer<typeof SAVE_DRAFT_SCHEMA>

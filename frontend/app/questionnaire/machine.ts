@@ -11,6 +11,7 @@ type Context = {
 export type Events =
   | { type: "START" }
   | { type: "LOAD_EXISTING"; answers: Record<string, string[]>; permitResult: PermitOutcome }
+  | { type: "LOAD_DRAFT"; answers: Record<string, string[]>; currentIndex: number }
   | { type: "SET_ANSWER"; questionId: string; values: string[] }
   | { type: "NEXT" }
   | { type: "BACK" }
@@ -62,6 +63,17 @@ export const createQuestionnaireMachine = (questions: QuestionDefinition[]) =>
               currentIndex: 0,
               permitResult: event.permitResult
             }))
+          },
+          LOAD_DRAFT: {
+            target: "answering",
+            actions: assign(({ event }) => {
+              const active = getActiveQuestions(questions, event.answers)
+              return {
+                answers: event.answers,
+                currentIndex: Math.min(event.currentIndex, Math.max(active.length - 1, 0)),
+                permitResult: null
+              }
+            })
           }
         }
       },

@@ -97,4 +97,78 @@ describe("questionnaires router", () => {
     const result = await caller.questionnaires.delete({ projectId: project.id })
     expect(result.success).toBe(true)
   })
+
+  test("saveDraft creates a draft questionnaire", async () => {
+    const caller = createTestCaller(appRouter)
+    const project = await createProject(caller)
+
+    const result = await caller.questionnaires.saveDraft({
+      projectId: project.id,
+      answers: { workType: ["interior"] },
+      currentIndex: 1
+    })
+
+    expect(result.status).toBe("draft")
+    expect(result.currentIndex).toBe(1)
+    expect(result.permitResult).toBeNull()
+    expect(result.answers).toEqual({ workType: ["interior"] })
+  })
+
+  test("saveDraft updates an existing draft", async () => {
+    const caller = createTestCaller(appRouter)
+    const project = await createProject(caller)
+
+    await caller.questionnaires.saveDraft({
+      projectId: project.id,
+      answers: { workType: ["interior"] },
+      currentIndex: 0
+    })
+
+    const updated = await caller.questionnaires.saveDraft({
+      projectId: project.id,
+      answers: { workType: ["interior"], interiorWork: ["flooring"] },
+      currentIndex: 1
+    })
+
+    expect(updated.currentIndex).toBe(1)
+    expect(updated.answers).toEqual({ workType: ["interior"], interiorWork: ["flooring"] })
+  })
+
+  test("saveDraft does not overwrite a submitted questionnaire", async () => {
+    const caller = createTestCaller(appRouter)
+    const project = await createProject(caller)
+
+    await caller.questionnaires.submit({
+      projectId: project.id,
+      answers: { workType: ["interior"], interiorWork: ["flooring"] }
+    })
+
+    const result = await caller.questionnaires.saveDraft({
+      projectId: project.id,
+      answers: { workType: ["exterior"] },
+      currentIndex: 0
+    })
+
+    expect(result.status).toBe("submitted")
+    expect(result.permitResult).toBe("no_permit")
+  })
+
+  test("submit upgrades a draft to submitted", async () => {
+    const caller = createTestCaller(appRouter)
+    const project = await createProject(caller)
+
+    await caller.questionnaires.saveDraft({
+      projectId: project.id,
+      answers: { workType: ["interior"] },
+      currentIndex: 0
+    })
+
+    const result = await caller.questionnaires.submit({
+      projectId: project.id,
+      answers: { workType: ["interior"], interiorWork: ["flooring"] }
+    })
+
+    expect(result.status).toBe("submitted")
+    expect(result.permitResult).toBe("no_permit")
+  })
 })

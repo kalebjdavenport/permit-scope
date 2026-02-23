@@ -4,7 +4,9 @@ import { Store, type StoreItem } from "#core/Store.ts"
 export interface Questionnaire extends StoreItem {
   projectId: string
   answers: Record<string, string[]>
-  permitResult: PermitOutcome
+  status: "draft" | "submitted"
+  currentIndex: number
+  permitResult: PermitOutcome | null
 }
 
 export class QuestionnaireStore extends Store<Questionnaire> {
@@ -23,6 +25,8 @@ export class QuestionnaireStore extends Store<Questionnaire> {
       ...model,
       projectId: item.projectId,
       answers: item.answers,
+      status: item.status,
+      currentIndex: item.currentIndex,
       permitResult: item.permitResult
     }
   }

@@ -1,5 +1,5 @@
 import { determinePermitRequirement } from "#app/logic/index.ts"
-import { SUBMIT_QUESTIONNAIRE_SCHEMA } from "#app/schemas/questionnaire.ts"
+import { SAVE_DRAFT_SCHEMA, SUBMIT_QUESTIONNAIRE_SCHEMA } from "#app/schemas/questionnaire.ts"
 import { procedure, router } from "#core/trpc.ts"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
@@ -12,6 +12,38 @@ export const questionnaires = router({
       return item ? ctx.cradle.questionnaires.toModel(item) : null
     }),
 
+  saveDraft: procedure
+    .input(SAVE_DRAFT_SCHEMA)
+    .mutation(({ ctx, input }) => {
+      const existing = ctx.cradle.questionnaires.getByProjectId(input.projectId)
+
+      // Don't overwrite a submitted record with a draft (prevents race with trailing debounce)
+      if (existing?.status === "submitted") {
+        return ctx.cradle.questionnaires.toModel(existing)
+      }
+
+      if (existing) {
+        const updated = {
+          ...existing,
+          answers: input.answers,
+          currentIndex: input.currentIndex,
+          status: "draft" as const,
+          permitResult: null
+        }
+        ctx.cradle.questionnaires.update(existing.id, updated)
+        return ctx.cradle.questionnaires.toModel(updated)
+      }
+
+      const created = ctx.cradle.questionnaires.add({
+        projectId: input.projectId,
+        answers: input.answers,
+        currentIndex: input.currentIndex,
+        status: "draft",
+        permitResult: null
+      })
+      return ctx.cradle.questionnaires.toModel(created)
+    }),
+
   submit: procedure
     .input(SUBMIT_QUESTIONNAIRE_SCHEMA)
     .mutation(({ ctx, input }) => {
@@ -20,12 +52,17 @@ export const questionnaires = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Project not found." })
       }
 
-      // Use server-side project location, never trust client-sent location
       const permitResult = determinePermitRequirement(input.answers, project.location)
       const existing = ctx.cradle.questionnaires.getByProjectId(input.projectId)
 
       if (existing) {
-        const updated = { ...existing, answers: input.answers, permitResult }
+        const updated = {
+          ...existing,
+          answers: input.answers,
+          status: "submitted" as const,
+          currentIndex: 0,
+          permitResult
+        }
         ctx.cradle.questionnaires.update(existing.id, updated)
         return ctx.cradle.questionnaires.toModel(updated)
       }
@@ -33,6 +70,8 @@ export const questionnaires = router({
       const created = ctx.cradle.questionnaires.add({
         projectId: input.projectId,
         answers: input.answers,
+        status: "submitted",
+        currentIndex: 0,
         permitResult
       })
       return ctx.cradle.questionnaires.toModel(created)
