@@ -13,6 +13,7 @@ coverage
 .env
 
 # DB
+tmp/
 backend/tmp/
 
 nohup.out
