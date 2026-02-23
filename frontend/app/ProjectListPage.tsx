@@ -2,7 +2,7 @@ import { BlurFade } from "@/components/magicui/blur-fade"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { trpc } from "@/lib/trpc"
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link } from "react-router"
 import { Heading } from "./Heading"
 
@@ -54,18 +54,47 @@ function ProjectList() {
     <div className="grid gap-3">
       {data.map((project, i) => (
         <BlurFade key={project.id} delay={0.05 * i}>
-          <Link to={`/projects/${project.id}`} className="block">
-            <Card className="transition-colors hover:border-primary/30 hover:shadow-md cursor-pointer">
-              <CardHeader>
-                <CardTitle>{project.name}</CardTitle>
-                <CardDescription>
-                  Created {new Date(project.createdAt).toLocaleDateString()}
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
+          <ProjectCard project={project} />
         </BlurFade>
       ))}
     </div>
+  )
+}
+
+function ProjectCard({ project }: { project: { id: string; name: string; createdAt: string } }) {
+  const queryClient = useQueryClient()
+  const deleteMutation = useMutation(trpc.projects.delete.mutationOptions())
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    if (!window.confirm("Delete this project? This will also remove its questionnaire.")) return
+
+    await deleteMutation.mutateAsync({ id: project.id })
+    queryClient.invalidateQueries({ queryKey: trpc.projects.pathKey() })
+  }
+
+  return (
+    <Link to={`/projects/${project.id}`} className="block">
+      <Card className="transition-colors hover:border-primary/30 hover:shadow-md cursor-pointer">
+        <CardHeader className="flex-row items-center justify-between gap-4">
+          <div>
+            <CardTitle>{project.name}</CardTitle>
+            <CardDescription>
+              Created {new Date(project.createdAt).toLocaleDateString()}
+            </CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-destructive hover:bg-destructive hover:text-destructive-foreground shrink-0"
+            onClick={handleDelete}
+            disabled={deleteMutation.isPending}
+          >
+            {deleteMutation.isPending ? "Deleting..." : "Delete"}
+          </Button>
+        </CardHeader>
+      </Card>
+    </Link>
   )
 }

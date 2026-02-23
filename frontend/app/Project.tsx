@@ -6,10 +6,9 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator
 } from "@/components/ui/breadcrumb"
-import { Button } from "@/components/ui/button"
 import { trpc } from "@/lib/trpc"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Link, useNavigate, useParams } from "react-router"
+import { useQuery } from "@tanstack/react-query"
+import { Link, useParams } from "react-router"
 import { Heading, Subheading } from "./Heading"
 import { QuestionnaireContext } from "./questionnaire/context"
 import { HeaderPermitBadge } from "./questionnaire/HeaderPermitBadge"
@@ -17,24 +16,11 @@ import { Questionnaire } from "./questionnaire/Questionnaire"
 
 export function Project() {
   const { id } = useParams()
-  const navigate = useNavigate()
-  const queryClient = useQueryClient()
 
   const { data: project } = useQuery({
     ...trpc.projects.get.queryOptions({ id: id! }),
     enabled: !!id
   })
-
-  const deleteMutation = useMutation(trpc.projects.delete.mutationOptions())
-
-  const handleDelete = async () => {
-    if (!id) return
-    if (!window.confirm("Delete this project? This will also remove its questionnaire.")) return
-
-    await deleteMutation.mutateAsync({ id })
-    queryClient.invalidateQueries({ queryKey: trpc.projects.pathKey() })
-    navigate("/projects")
-  }
 
   if (!id || !project) {
     return <div>Project not found</div>
@@ -57,21 +43,8 @@ export function Project() {
         </Breadcrumb>
 
         <BlurFade>
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex flex-col gap-0">
-              <Heading>{project.name}</Heading>
-              <div className="text-sm text-muted-foreground -mt-2">{project.location}</div>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-              onClick={handleDelete}
-              disabled={deleteMutation.isPending}
-            >
-              {deleteMutation.isPending ? "Deleting..." : "Delete Project"}
-            </Button>
-          </div>
+          <Heading>{project.name}</Heading>
+          <div className="text-sm text-muted-foreground -mt-2">{project.location}</div>
         </BlurFade>
 
         <BlurFade delay={0.1}>

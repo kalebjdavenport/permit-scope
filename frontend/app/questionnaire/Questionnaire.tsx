@@ -2,6 +2,7 @@ import { BlurFade } from "@/components/magicui/blur-fade"
 import { ShimmerButton } from "@/components/magicui/shimmer-button"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Link } from "react-router"
 import { QuestionnaireContext } from "./context"
 import { getActiveQuestions, scopeOfWorkQuestions } from "./definition"
 import { PermitResult } from "./PermitResult"
@@ -41,13 +42,18 @@ export function Questionnaire({ projectId }: Props) {
     return (
       <div className="flex flex-col gap-4">
         <PermitResult permitResult={permitResult!} />
-        <Button
-          variant="outline"
-          onClick={() => send({ type: "START_OVER" })}
-          disabled={stateValue === "deleting"}
-        >
-          {stateValue === "deleting" ? "Clearing..." : "Start Over"}
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild>
+            <Link to="/projects">Back to Projects</Link>
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => send({ type: "START_OVER" })}
+            disabled={stateValue === "deleting"}
+          >
+            {stateValue === "deleting" ? "Clearing..." : "Start Over"}
+          </Button>
+        </div>
       </div>
     )
   }
