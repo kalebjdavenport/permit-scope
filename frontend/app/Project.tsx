@@ -17,14 +17,26 @@ import { Questionnaire } from "./questionnaire/Questionnaire"
 export function Project() {
   const { id } = useParams()
 
-  const { data: project } = useQuery({
+  const projectQuery = useQuery({
     ...trpc.projects.get.queryOptions({ id: id! }),
     enabled: !!id
   })
 
-  if (!id || !project) {
+  if (!id) {
     return <div>Project not found</div>
   }
+  if (projectQuery.isPending) {
+    return (
+      <div className="text-sm text-muted-foreground" role="status">
+        Loading project...
+      </div>
+    )
+  }
+  if (projectQuery.isError || !projectQuery.data) {
+    return <div>Project not found</div>
+  }
+
+  const project = projectQuery.data
 
   return (
     <QuestionnaireContext.Provider>

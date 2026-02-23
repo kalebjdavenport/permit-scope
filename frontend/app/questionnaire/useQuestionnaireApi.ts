@@ -1,22 +1,51 @@
 import { trpc } from "@/lib/trpc"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useEffect, useRef } from "react"
+import { useCallback, useEffect, useRef } from "react"
 import { QuestionnaireContext } from "./context"
 import { scopeOfWorkQuestions, scrubAnswers } from "./definition"
 
 type ActorRef = ReturnType<typeof QuestionnaireContext.useActorRef>
+const FALLBACK_ERROR = "Something went wrong. Please try again."
+const DRAFT_SAVE_DELAY_MS = 1000
 
-/** Runs an async effect when the machine enters a target state. */
-function useOnState(
-  stateValue: string,
-  targetState: string,
-  run: () => Promise<void>
-) {
+const toErrorMessage = (error: unknown) => (error instanceof Error ? error.message : FALLBACK_ERROR)
+
+type MutationEffectArgs<Result> = {
+  stateValue: string
+  targetState: string
+  mutate: () => Promise<Result>
+  onSuccess: (result: Result) => void
+  onError: (error: unknown) => void
+}
+
+function useMachineMutationEffect<Result>({
+  stateValue,
+  targetState,
+  mutate,
+  onSuccess,
+  onError
+}: MutationEffectArgs<Result>) {
   useEffect(() => {
     if (stateValue !== targetState) return
-    run().catch(() => { /* handled by caller */ })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stateValue])
+    let cancelled = false
+
+    const run = async () => {
+      try {
+        const result = await mutate()
+        if (cancelled) return
+        onSuccess(result)
+      } catch (error) {
+        if (cancelled) return
+        onError(error)
+      }
+    }
+
+    run()
+
+    return () => {
+      cancelled = true
+    }
+  }, [mutate, onError, onSuccess, stateValue, targetState])
 }
 
 /**
@@ -27,26 +56,25 @@ function useOnState(
  */
 export function useQuestionnaireApi(projectId: string, actorRef: ActorRef) {
   const queryClient = useQueryClient()
-  const loadedRef = useRef(false)
+  const hasHydratedRef = useRef(false)
 
   const stateValue = QuestionnaireContext.useSelector((s) => s.value)
   const answers = QuestionnaireContext.useSelector((s) => s.context.answers)
   const currentIndex = QuestionnaireContext.useSelector((s) => s.context.currentIndex)
 
-  const { data: existing, isLoading } = useQuery(
-    trpc.questionnaires.getByProject.queryOptions({ projectId })
-  )
+  const queryOptions = trpc.questionnaires.getByProject.queryOptions({ projectId })
+  const { data: existing, isLoading } = useQuery(queryOptions)
+  const queryKey = queryOptions.queryKey
 
   const submitMutation = useMutation(trpc.questionnaires.submit.mutationOptions())
   const deleteMutation = useMutation(trpc.questionnaires.delete.mutationOptions())
   const draftMutation = useMutation(trpc.questionnaires.saveDraft.mutationOptions())
   const reopenMutation = useMutation(trpc.questionnaires.reopenDraft.mutationOptions())
-  const queryKey = trpc.questionnaires.getByProject.queryOptions({ projectId }).queryKey
 
   // Hydrate machine with saved questionnaire on first load
   useEffect(() => {
-    if (loadedRef.current || isLoading || !existing) return
-    loadedRef.current = true
+    if (hasHydratedRef.current || isLoading || !existing) return
+    hasHydratedRef.current = true
 
     if (existing.status === "draft") {
       actorRef.send({
@@ -70,46 +98,57 @@ export function useQuestionnaireApi(projectId: string, actorRef: ActorRef) {
 
     const timer = setTimeout(() => {
       draftMutation.mutate({ projectId, answers, currentIndex })
-    }, 1000)
+    }, DRAFT_SAVE_DELAY_MS)
     return () => clearTimeout(timer)
-  }, [answers, currentIndex]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [answers, currentIndex, draftMutation, projectId, stateValue])
 
-  // Submit when entering "submitting"
-  useOnState(stateValue, "submitting", async () => {
-    const snap = actorRef.getSnapshot()
-    const scrubbed = scrubAnswers(snap.context.answers, scopeOfWorkQuestions)
-    try {
-      const result = await submitMutation.mutateAsync({ projectId, answers: scrubbed })
-      queryClient.invalidateQueries({ queryKey })
+  const invalidateQuestionnaire = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey })
+  }, [queryClient, queryKey])
+
+  const submitAnswers = useCallback(async () => {
+    const snapshot = actorRef.getSnapshot()
+    const submitAnswers = scrubAnswers(snapshot.context.answers, scopeOfWorkQuestions)
+    return submitMutation.mutateAsync({ projectId, answers: submitAnswers })
+  }, [actorRef, projectId, submitMutation])
+
+  useMachineMutationEffect({
+    stateValue,
+    targetState: "submitting",
+    mutate: submitAnswers,
+    onSuccess: (result) => {
+      invalidateQuestionnaire()
       actorRef.send({ type: "SUBMIT_SUCCESS", permitResult: result.permitResult! })
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Something went wrong. Please try again."
-      actorRef.send({ type: "SUBMIT_ERROR", error: message })
+    },
+    onError: (error) => {
+      actorRef.send({ type: "SUBMIT_ERROR", error: toErrorMessage(error) })
     }
   })
 
-  // Delete when entering "deleting"
-  useOnState(stateValue, "deleting", async () => {
-    try {
-      await deleteMutation.mutateAsync({ projectId })
-      queryClient.invalidateQueries({ queryKey })
-      loadedRef.current = false
+  useMachineMutationEffect({
+    stateValue,
+    targetState: "deleting",
+    mutate: () => deleteMutation.mutateAsync({ projectId }),
+    onSuccess: () => {
+      invalidateQuestionnaire()
+      hasHydratedRef.current = false
       actorRef.send({ type: "DELETE_SUCCESS" })
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Something went wrong. Please try again."
-      actorRef.send({ type: "DELETE_ERROR", error: message })
+    },
+    onError: (error) => {
+      actorRef.send({ type: "DELETE_ERROR", error: toErrorMessage(error) })
     }
   })
 
-  // Reopen draft when entering "reopening"
-  useOnState(stateValue, "reopening", async () => {
-    try {
-      await reopenMutation.mutateAsync({ projectId })
-      queryClient.invalidateQueries({ queryKey })
+  useMachineMutationEffect({
+    stateValue,
+    targetState: "reopening",
+    mutate: () => reopenMutation.mutateAsync({ projectId }),
+    onSuccess: () => {
+      invalidateQuestionnaire()
       actorRef.send({ type: "REOPEN_SUCCESS" })
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Something went wrong. Please try again."
-      actorRef.send({ type: "REOPEN_ERROR", error: message })
+    },
+    onError: (error) => {
+      actorRef.send({ type: "REOPEN_ERROR", error: toErrorMessage(error) })
     }
   })
 

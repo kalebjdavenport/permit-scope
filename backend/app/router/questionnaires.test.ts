@@ -75,6 +75,63 @@ describe("questionnaires router", () => {
     ).rejects.toThrow("Project not found")
   })
 
+  test("submit rejects payload without workType", async () => {
+    const caller = createTestCaller(appRouter)
+    const project = await createProject(caller)
+
+    expect(
+      caller.questionnaires.submit({
+        projectId: project.id,
+        answers: { interiorWork: ["flooring"] }
+      })
+    ).rejects.toThrow("Work type is required")
+  })
+
+  test("submit rejects dependent answers when parent work type is not selected", async () => {
+    const caller = createTestCaller(appRouter)
+    const project = await createProject(caller)
+
+    expect(
+      caller.questionnaires.submit({
+        projectId: project.id,
+        answers: {
+          workType: ["exterior"],
+          interiorWork: ["flooring"],
+          exteriorWork: ["fencing"]
+        }
+      })
+    ).rejects.toThrow("Interior details require interior work type")
+  })
+
+  test("submit rejects multiple property additions", async () => {
+    const caller = createTestCaller(appRouter)
+    const project = await createProject(caller)
+
+    expect(
+      caller.questionnaires.submit({
+        projectId: project.id,
+        answers: {
+          workType: ["additions"],
+          propertyAdditions: ["adu", "garage_conversion"]
+        }
+      })
+    ).rejects.toThrow("Exactly one property addition is required")
+  })
+
+  test("submit rejects missing property addition detail when additions selected", async () => {
+    const caller = createTestCaller(appRouter)
+    const project = await createProject(caller)
+
+    expect(
+      caller.questionnaires.submit({
+        projectId: project.id,
+        answers: {
+          workType: ["additions"]
+        }
+      })
+    ).rejects.toThrow("Exactly one property addition is required")
+  })
+
   test("delete removes questionnaire", async () => {
     const caller = createTestCaller(appRouter)
     const project = await createProject(caller)
@@ -112,6 +169,18 @@ describe("questionnaires router", () => {
     expect(result.currentIndex).toBe(1)
     expect(result.permitResult).toBeNull()
     expect(result.answers).toEqual({ workType: ["interior"] })
+  })
+
+  test("saveDraft throws NOT_FOUND for missing project", async () => {
+    const caller = createTestCaller(appRouter)
+
+    expect(
+      caller.questionnaires.saveDraft({
+        projectId: "missing-project",
+        answers: { workType: ["interior"] },
+        currentIndex: 0
+      })
+    ).rejects.toThrow("Project not found")
   })
 
   test("saveDraft updates an existing draft", async () => {

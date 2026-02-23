@@ -4,6 +4,19 @@ import { procedure, router } from "#core/trpc.ts"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 
+type ProjectForPermitDecision = { location: string }
+
+function requireProject(
+  ctx: { cradle: { projects: { get: (id: string) => ProjectForPermitDecision | undefined } } },
+  projectId: string
+) {
+  const project = ctx.cradle.projects.get(projectId)
+  if (!project) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "Project not found." })
+  }
+  return project
+}
+
 export const questionnaires = router({
   getByProject: procedure
     .input(z.object({ projectId: z.string() }))
@@ -15,6 +28,7 @@ export const questionnaires = router({
   saveDraft: procedure
     .input(SAVE_DRAFT_SCHEMA)
     .mutation(({ ctx, input }) => {
+      requireProject(ctx, input.projectId)
       const existing = ctx.cradle.questionnaires.getByProjectId(input.projectId)
 
       // Don't overwrite a submitted record with a draft (prevents race with trailing debounce)
@@ -34,10 +48,7 @@ export const questionnaires = router({
   submit: procedure
     .input(SUBMIT_QUESTIONNAIRE_SCHEMA)
     .mutation(({ ctx, input }) => {
-      const project = ctx.cradle.projects.get(input.projectId)
-      if (!project) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Project not found." })
-      }
+      const project = requireProject(ctx, input.projectId)
 
       const permitResult = determinePermitRequirement(input.answers, project.location)
       const item = ctx.cradle.questionnaires.upsertByProjectId(input.projectId, {

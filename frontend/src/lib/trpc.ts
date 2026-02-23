@@ -13,7 +13,28 @@ export const queryClient = new QueryClient({
 
 const trpcClient = createTRPCClient<AppRouter>({
   links: [
-    loggerLink(),
+    loggerLink({
+      enabled: (opts) =>
+        "type" in opts ? opts.type === "mutation" : true,
+      logger(opts) {
+        const { direction, path, input } = opts
+        if (direction === "up") {
+          console.log(`>> ${path}`, input ?? "")
+          return
+        }
+        const { elapsedMs, result } = opts
+        if (result instanceof Error) {
+          console.error(`<< ${path} (${elapsedMs}ms)`, result.message)
+          return
+        }
+        const inner = result.result as { data?: unknown; error?: unknown }
+        if (inner.error) {
+          console.error(`<< ${path} (${elapsedMs}ms)`, inner.error)
+        } else {
+          console.log(`<< ${path} (${elapsedMs}ms)`, inner.data ?? "")
+        }
+      }
+    }),
     httpBatchLink({
       url: "http://localhost:3333/trpc"
     })
