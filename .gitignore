@@ -16,3 +16,6 @@ coverage
 backend/tmp/
 
 nohup.out
+
+# Claude Code
+.claude/settings.local.json
