@@ -1,11 +1,19 @@
 import { BlurFade } from "@/components/magicui/blur-fade"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { trpc } from "@/lib/trpc"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Trash2 } from "lucide-react"
 import { Link } from "react-router"
 import { Heading } from "./Heading"
+
+type ProjectSummary = {
+  id: string
+  name: string
+  location: string
+  createdAt: string
+}
 
 export function ProjectListPage() {
   return (
@@ -30,9 +38,9 @@ export function ProjectListPage() {
 }
 
 function ProjectList() {
-  const { data } = useQuery(trpc.projects.list.queryOptions())
+  const projectsQuery = useQuery(trpc.projects.list.queryOptions())
 
-  if (!data) {
+  if (projectsQuery.isPending) {
     return (
       <div className="grid gap-3">
         {Array.from({ length: 3 }, (_, i) => (
@@ -51,7 +59,15 @@ function ProjectList() {
     )
   }
 
-  if (data.length === 0) {
+  if (projectsQuery.isError) {
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>Could not load projects. Please refresh and try again.</AlertDescription>
+      </Alert>
+    )
+  }
+
+  if (projectsQuery.data.length === 0) {
     return (
       <BlurFade delay={0.1}>
         <Card className="border-dashed">
@@ -70,7 +86,7 @@ function ProjectList() {
 
   return (
     <div className="grid gap-3">
-      {data.map((project, i) => (
+      {projectsQuery.data.map((project: ProjectSummary, i: number) => (
         <BlurFade key={project.id} delay={0.05 * i}>
           <ProjectCard project={project} />
         </BlurFade>
@@ -79,7 +95,11 @@ function ProjectList() {
   )
 }
 
-function ProjectCard({ project }: { project: { id: string; name: string; createdAt: string } }) {
+function ProjectCard({
+  project
+}: {
+  project: ProjectSummary
+}) {
   const queryClient = useQueryClient()
   const deleteMutation = useMutation(trpc.projects.delete.mutationOptions())
 
@@ -93,27 +113,31 @@ function ProjectCard({ project }: { project: { id: string; name: string; created
   }
 
   return (
-    <Link to={`/projects/${project.id}`} className="block">
-      <Card className="transition-colors hover:border-primary/30 hover:shadow-md cursor-pointer">
-        <CardHeader>
+    <Card className="transition-colors hover:border-primary/30 hover:shadow-md">
+      <CardHeader className="gap-3 sm:flex sm:flex-row sm:items-start sm:justify-between">
+        <Link
+          to={`/projects/${project.id}`}
+          className="block flex-1 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
           <CardTitle>{project.name}</CardTitle>
+          <CardDescription className="mt-1">
+            {project.location}
+          </CardDescription>
           <CardDescription>
             Created {new Date(project.createdAt).toLocaleDateString()}
           </CardDescription>
-          <CardAction>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-muted-foreground hover:text-destructive cursor-pointer"
-              onClick={handleDelete}
-              disabled={deleteMutation.isPending}
-              aria-label="Delete project"
-            >
-              <Trash2 className="size-4" />
-            </Button>
-          </CardAction>
-        </CardHeader>
-      </Card>
-    </Link>
+        </Link>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="shrink-0 text-muted-foreground hover:text-destructive"
+          onClick={handleDelete}
+          disabled={deleteMutation.isPending}
+          aria-label={`Delete ${project.name}`}
+        >
+          <Trash2 className="size-4" />
+        </Button>
+      </CardHeader>
+    </Card>
   )
 }

@@ -10,7 +10,7 @@ graph TD
   Rules -->|"answers + permitResult"| Store
 ```
 
-On submit, the router passes answers + project location to `determinePermitRequirement()`, which returns one of three outcomes evaluated in priority order:
+On submit, the router sends the answers and project location to `determinePermitRequirement()`. The rules run in priority order and return one of three outcomes:
 
 | Outcome | Triggered by |
 | --- | --- |
@@ -45,7 +45,7 @@ sequenceDiagram
 
 ## Key Decisions
 
-- **XState v5 for form state** -- 6 states (idle, answering, submitting, submitted, reopening, deleting) with guards and timeouts. Makes impossible states unrepresentable.
-- **Debounced auto-save** -- Saves drafts 1s after last change. Trailing debounce is suppressed after submission to prevent overwriting.
-- **Backend-authoritative permit logic** -- Single source of truth; can't be spoofed by client.
-- **Single record per project** -- `status: "draft" | "submitted"` on one record, overwritten in place. No orphan cleanup needed.
+- **XState v5 for form state**: The questionnaire uses 6 explicit states with guards and timeout recovery for in-flight mutations.
+- **Debounced auto-save**: Drafts save 1 second after the last answer or navigation change. A submitted record is never downgraded back to a draft.
+- **Backend-authoritative permit logic**: Permit outcomes are computed on the server, not inferred from client state.
+- **Single questionnaire record per project**: The same record moves between `draft` and `submitted`, which keeps restore, edit, and delete paths simple.

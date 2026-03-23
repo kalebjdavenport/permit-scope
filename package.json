@@ -35,6 +35,6 @@
   },
   "scripts": {
     "dev": "turbo dev",
-    "test": "bun test backend/app"
+    "test": "bun test backend/app frontend/app"
   }
 }

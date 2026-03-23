@@ -1,19 +1,22 @@
 # Permit Scope
 
-A multi-step questionnaire that determines building permit requirements for residential construction projects. Built to demonstrate **complex form state management** with XState, React Hook Form, and debounced auto-save.
+A small permitting app for residential construction projects. Users create a project, answer a branching questionnaire, and get a permit path based on their scope of work.
 
 ## Quick Start
 
 ```bash
 bun install
 bun run dev
+bun test
 ```
 
-Open [http://localhost:6173](http://localhost:6173). Alternatively, open in a [devcontainer](.devcontainer/) for a zero-config setup.
+Open [http://localhost:6173](http://localhost:6173).
+
+If you prefer a containerized setup, the repo also includes a [devcontainer](.devcontainer/).
 
 ## How It Works
 
-Users create a project, answer a branching scope-of-work questionnaire, and receive one of three permit outcomes:
+Each project stores one questionnaire. Answers branch the next questions, save as a draft, and can be restored on reload. Submission runs the permit rules on the backend and returns one of three outcomes:
 
 | Outcome | Triggered by |
 | --- | --- |
@@ -21,7 +24,7 @@ Users create a project, answer a branching scope-of-work questionnaire, and rece
 | **OTC Review** | Bathroom remodel, electrical, roof, garage + exterior doors combo |
 | **No Permit** | Everything else |
 
-Answers auto-save as drafts and survive page reloads. Submitted results can be edited or cleared.
+Submitted answers can be reopened for editing or cleared to start over.
 
 ## Architecture
 
@@ -33,11 +36,11 @@ graph TD
   Rules -->|"answers + permitResult"| Store
 ```
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for the form update sequence diagram and key design decisions.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the request flow and design notes.
 
 ## Form State Machine
 
-The questionnaire uses an **XState v5 state machine** with 6 states:
+The questionnaire runs on an **XState v5** state machine with 6 explicit states:
 
 ```
 idle → answering → submitting → submitted
@@ -45,7 +48,7 @@ idle → answering → submitting → submitted
                                   ↕ deleting → idle
 ```
 
-Guards prevent impossible transitions: no double-submit, no navigation mid-request, no trailing auto-save overwriting a real submission.
+Guards and explicit transitions keep the form predictable: no next-step without an answer, no duplicate submit, and no trailing draft save overwriting a submitted record.
 
 ## Tech Stack
 
@@ -68,6 +71,6 @@ frontend/
   app/
     questionnaire/  # XState machine, form UI, API bridge
   src/
-    components/     # shadcn/ui + animation components
+    components/     # shadcn/ui primitives and shared UI
     lib/            # API client, utilities
 ```

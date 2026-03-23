@@ -1,4 +1,5 @@
 import { BlurFade } from "@/components/magicui/blur-fade"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -21,6 +22,7 @@ import { trpc } from "@/lib/trpc"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { CREATE_PROJECT_SCHEMA, CreateProjectSchema } from "@permit-scope/backend/schemas"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { Link, useNavigate } from "react-router"
 import { Heading } from "./Heading"
@@ -56,6 +58,7 @@ export function CreateProjectPage() {
 }
 
 function ProjectForm() {
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const form = useForm<CreateProjectSchema>({
     resolver: zodResolver(CREATE_PROJECT_SCHEMA),
     defaultValues: {
@@ -71,17 +74,24 @@ function ProjectForm() {
 
   const onSubmit = async (data: CreateProjectSchema) => {
     try {
+      setSubmitError(null)
       const project = await createProject(data)
       queryClient.invalidateQueries({ queryKey: trpc.projects.pathKey() })
       navigate(`/projects/${project.id}`)
     } catch (error) {
       console.error(error)
+      setSubmitError("Could not create the project. Please try again.")
     }
   }
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+        {submitError && (
+          <Alert variant="destructive">
+            <AlertDescription>{submitError}</AlertDescription>
+          </Alert>
+        )}
         <FormField
           control={form.control}
           name="name"
