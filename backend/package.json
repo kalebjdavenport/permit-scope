@@ -1,5 +1,5 @@
 {
-  "name": "@permitflow/backend",
+  "name": "@permit-scope/backend",
   "type": "module",
   "version": "0.0.0",
   "sideEffects": false,

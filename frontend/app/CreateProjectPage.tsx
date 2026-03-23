@@ -19,7 +19,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { trpc } from "@/lib/trpc"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { CREATE_PROJECT_SCHEMA, CreateProjectSchema } from "@permitflow/backend/schemas"
+import { CREATE_PROJECT_SCHEMA, CreateProjectSchema } from "@permit-scope/backend/schemas"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 import { Link, useNavigate } from "react-router"

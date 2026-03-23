@@ -1,4 +1,4 @@
-import type { PermitOutcome } from "@permitflow/backend/logic"
+import type { PermitOutcome } from "@permit-scope/backend/logic"
 
 type OutcomeMeta = {
   label: string

@@ -1,4 +1,4 @@
-import type { AppRouter } from "@permitflow/backend"
+import type { AppRouter } from "@permit-scope/backend"
 import { QueryClient } from "@tanstack/react-query"
 import { createTRPCClient, httpBatchLink, loggerLink } from "@trpc/client"
 import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query"

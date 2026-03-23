@@ -1,4 +1,4 @@
-import { QUESTION_OPTIONS } from "@permitflow/backend/logic"
+import { QUESTION_OPTIONS } from "@permit-scope/backend/logic"
 
 export type QuestionDefinition = {
   id: string

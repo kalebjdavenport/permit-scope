@@ -1,6 +1,6 @@
 import { BlurFade } from "@/components/magicui/blur-fade"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import type { PermitOutcome } from "@permitflow/backend/logic"
+import type { PermitOutcome } from "@permit-scope/backend/logic"
 import { OUTCOME_META } from "./outcomeMeta"
 
 const RESULT_ITEMS: Record<PermitOutcome, string[]> = {

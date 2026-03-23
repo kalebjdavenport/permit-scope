@@ -1,4 +1,4 @@
-import { determinePermitRequirement } from "@permitflow/backend/logic"
+import { determinePermitRequirement } from "@permit-scope/backend/logic"
 import { createPortal } from "react-dom"
 import { QuestionnaireContext } from "./context"
 import { scopeOfWorkQuestions, scrubAnswers } from "./definition"

@@ -29,7 +29,7 @@ class TestQuestionnaireStore extends QuestionnaireStore {
 }
 
 function createIsolatedStores() {
-  const sandboxDir = fs.mkdtempSync(path.join(os.tmpdir(), "permitflow-router-tests-"))
+  const sandboxDir = fs.mkdtempSync(path.join(os.tmpdir(), "permit-scope-router-tests-"))
   return {
     projects: new TestProjectStore(sandboxDir),
     questionnaires: new TestQuestionnaireStore(sandboxDir)
